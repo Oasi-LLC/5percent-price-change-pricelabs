@@ -1,0 +1,11 @@
+pinecone-client
+openai
+anthropic
+python-dotenv>=0.19.0
+streamlit
+langchain
+langchain-openai
+langchain-anthropic
+pandas
+click>=8.0.0
+requests>=2.25.0

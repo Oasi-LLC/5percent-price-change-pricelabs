@@ -1,0 +1,41 @@
+# CRITICAL SAFETY RULES FOR CODE CHANGES
+
+1. DIFF COMPLIANCE
+- Follow diffs EXACTLY, character by character
+- Only modify lines explicitly shown in the diff
+- Never touch code outside the diff's scope
+- Never "improve" or "modernize" code not in diff
+- Never change API endpoints or authentication methods
+- If a file isn't in the diff, don't modify it
+
+2. CORE PROTECTIONS
+- Treat working code as sacred
+- No creative interpretation of diffs
+- No additional "helpful" changes
+- No changing of functional logic
+- No modifying of API integrations
+- No updating of dependencies or versions
+
+3. CHANGE BOUNDARIES
+- If removing line X, only remove line X
+- If adding line Y, only add line Y
+- If modifying line Z, only change what's shown
+- Keep all other code exactly as is
+- Maintain existing whitespace and formatting
+- Preserve all comments not explicitly changed
+
+4. SAFETY PROTOCOLS
+- When in doubt, ask first
+- Never assume improvements are needed
+- Report potential issues instead of fixing
+- Require explicit confirmation for any extra changes
+- Stop and ask if diff seems incomplete
+- Flag any safety concerns before proceeding
+
+5. FORBIDDEN ACTIONS
+- No "modernizing" working code
+- No changing API endpoints
+- No modifying authentication
+- No updating working functions
+- No adding new features
+- No removing "old" code 
