@@ -205,12 +205,20 @@ def list(pms: Optional[str]):
         raise click.Abort()
 
 @cli.command()
-@click.option('--listing-id', help='Specific listing ID to update')
-@click.option('--increase', is_flag=True, help='Increase prices by 5%')
-@click.option('--decrease', is_flag=True, help='Decrease prices by 5%')
+@click.option('--listing-id', multiple=True, help='Specific listing ID(s) to update. Can be specified multiple times.')
+@click.option('--increase', is_flag=True, help='Increase prices by 5%', default=False)
+@click.option('--decrease', is_flag=True, help='Decrease prices by 5%', default=False)
 @click.option('--dry-run', is_flag=True, help='Preview changes without applying them')
-def update(listing_id: str = None, increase: bool = False, decrease: bool = False, dry_run: bool = False):
+def update(listing_id: tuple = None, increase: bool = False, decrease: bool = False, dry_run: bool = False):
     """Update prices for active listings"""
+    if increase and decrease:
+        click.echo("Error: Cannot specify both --increase and --decrease flags", err=True)
+        raise click.Abort()
+        
+    if not increase and not decrease:
+        click.echo("Error: Must specify either --increase or --decrease flag", err=True)
+        raise click.Abort()
+
     client = PriceLabsAPI()
     
     try:
@@ -220,9 +228,11 @@ def update(listing_id: str = None, increase: bool = False, decrease: bool = Fals
         return
     
     if listing_id:
-        listings = [l for l in listings if str(l.get('id')) == str(listing_id)]
+        # Convert listing_id tuple to list of strings
+        listing_ids = [str(lid) for lid in listing_id]
+        listings = [l for l in listings if str(l.get('id')) in listing_ids]
         if not listings:
-            log_error(error_logger, listing_id, "N/A", "N/A", "N/A", "N/A", 0.0, 0.0, "USD", f"No listing found with ID: {listing_id}")
+            log_error(error_logger, str(listing_ids), "N/A", "N/A", "N/A", "N/A", 0.0, 0.0, "USD", f"No listings found with IDs: {listing_ids}")
             return
     
     for listing in listings:
@@ -234,8 +244,10 @@ def update(listing_id: str = None, increase: bool = False, decrease: bool = Fals
         min_price = listing.get('min_price', 0)
         max_price = listing.get('max_price', 0)
         
+        logger.info(f"Processing {listing_name} (ID: {listing_id}) using PMS: {pms_name}")
+        
         try:
-            overrides = client.get_listing_overrides(listing_id)
+            overrides = client.get_listing_overrides(listing_id, pms=pms_name)
         except Exception as e:
             log_error(
                 error_logger,
@@ -259,7 +271,7 @@ def update(listing_id: str = None, increase: bool = False, decrease: bool = Fals
             try:
                 old_price = float(override.get('price', 0))
                 if old_price > 0:
-                    new_price = calculate_adjusted_price(old_price, increase)
+                    new_price = calculate_adjusted_price(old_price, increase=increase)
                     
                     adjusted_override = {
                         'date': override['date'],
@@ -305,7 +317,8 @@ def update(listing_id: str = None, increase: bool = False, decrease: bool = Fals
         # Update overrides in PriceLabs if not a dry run
         if adjusted_overrides and not dry_run:
             try:
-                client.update_listing_overrides(listing_id, adjusted_overrides)
+                client.update_listing_overrides(listing_id, adjusted_overrides, pms=pms_name)
+                logger.info(f"Successfully updated {len(adjusted_overrides)} prices for {listing_name}")
             except Exception as e:
                 log_error(
                     error_logger,
