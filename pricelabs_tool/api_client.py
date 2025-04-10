@@ -32,12 +32,16 @@ class PriceLabsAPI:
         data = response.json()
         return data.get('listings', []) if isinstance(data, dict) else []
 
-    def get_listing_overrides(self, listing_id: str, pms: str = "cloudbeds") -> Dict:
+    def get_listing_overrides(self, listing_id: str, pms: str = None) -> Dict:
         """Fetch overrides for a specific listing"""
         try:
+            params = {}
+            if pms:
+                params['pms'] = pms
+                
             response = self.session.get(
                 f"{self.base_url}/listings/{listing_id}/overrides",
-                params={"pms": pms}
+                params=params
             )
             response.raise_for_status()
             return response.json()
@@ -49,7 +53,7 @@ class PriceLabsAPI:
         self,
         listing_id: str,
         overrides: List[Dict],
-        pms: str = "cloudbeds",
+        pms: str = None,
         update_children: bool = False
     ) -> Dict:
         """
@@ -59,22 +63,22 @@ class PriceLabsAPI:
             listing_id: The ID of the listing to update
             overrides: List of override objects with required fields:
                       date, price, price_type, currency, min_stay
-            pms: PMS name (e.g. "cloudbeds")
+            pms: PMS name (e.g. "cloudbeds", "hostaway", "ownerrez")
             update_children: Whether to update child listings
         """
         try:
             payload = {
-                "pms": pms,
                 "update_children": update_children,
                 "overrides": overrides
             }
+            if pms:
+                payload['pms'] = pms
             
             logger.debug(f"Sending update request for listing {listing_id}")
             logger.debug(f"Request URL: {self.base_url}/listings/{listing_id}/overrides")
             logger.debug(f"Headers: {self.session.headers}")
             logger.debug(f"Payload: {payload}")
 
-            # Use session.post instead of requests.post to ensure headers are used
             response = self.session.post(
                 f"{self.base_url}/listings/{listing_id}/overrides",
                 json=payload
