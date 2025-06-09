@@ -2,6 +2,8 @@
 .env
 *.env
 .env.*
+*.json
+nca-toolkit-project-446011-67d246fdbccf.json
 
 # Python virtual environment
 venv/
