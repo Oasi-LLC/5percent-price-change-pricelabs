@@ -193,7 +193,17 @@ if 'listings' not in st.session_state:
 if st.button('Refresh Listings from PriceLabs'):
     with st.spinner('Fetching latest listings...'):
         st.session_state['listings'] = fetch_listings()
-        st.success(f"Fetched {len(st.session_state['listings'])} active listings.")
+        total_listings = len(st.session_state['listings'])
+        st.success(f"Fetched {total_listings} active listings.")
+        
+        # Show summary stats
+        if total_listings > 0:
+            st.subheader("📊 Listings Summary")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Total Active Listings", total_listings)
+            with col2:
+                st.metric("Ready for Adjustment", total_listings)
 
 listings = st.session_state['listings']
 
@@ -236,7 +246,26 @@ if listings:
                 st.info("Running dry run to preview changes...")
                 results, dry_run_summary = batch_update(selected_listing_objects, increase, dry_run=True)
                 
+                # Calculate dry run totals
+                total_changes = sum([item.get('changes', 0) for item in dry_run_summary if 'error' not in item])
+                total_listings = len(dry_run_summary)
+                successful_dry_run = len([item for item in dry_run_summary if 'error' not in item])
+                failed_dry_run = len([item for item in dry_run_summary if 'error' in item])
+                
                 st.subheader("Dry Run Results")
+                
+                # Summary stats for dry run
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Listings Processed", total_listings)
+                with col2:
+                    st.metric("Successful", successful_dry_run, delta=f"+{successful_dry_run}")
+                with col3:
+                    st.metric("Failed", failed_dry_run, delta=f"-{failed_dry_run}")
+                with col4:
+                    st.metric("Total Price Changes", total_changes)
+                
+                # Individual results
                 for item in dry_run_summary:
                     if 'error' in item:
                         st.error(f"❌ {item['name']}: {item['error']}")
@@ -252,7 +281,23 @@ if listings:
                     st.info("Applying changes...")
                     results, _ = batch_update(selected_listing_objects, increase, dry_run=False)
                     
+                    # Calculate totals
+                    successful = len([r for r in results if r['status'] == 'success'])
+                    failed = len([r for r in results if r['status'] == 'error'])
+                    total = len(results)
+                    
                     st.subheader("Results")
+                    
+                    # Summary stats
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Total Processed", total)
+                    with col2:
+                        st.metric("Successful", successful, delta=f"+{successful}")
+                    with col3:
+                        st.metric("Failed", failed, delta=f"-{failed}")
+                    
+                    # Individual results
                     for result in results:
                         if result['status'] == 'success':
                             st.success(f"✅ {result['name']}: Updated successfully")
@@ -262,7 +307,23 @@ if listings:
                 st.info("Applying changes directly...")
                 results, _ = batch_update(selected_listing_objects, increase, dry_run=False)
                 
+                # Calculate totals
+                successful = len([r for r in results if r['status'] == 'success'])
+                failed = len([r for r in results if r['status'] == 'error'])
+                total = len(results)
+                
                 st.subheader("Results")
+                
+                # Summary stats
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total Processed", total)
+                with col2:
+                    st.metric("Successful", successful, delta=f"+{successful}")
+                with col3:
+                    st.metric("Failed", failed, delta=f"-{failed}")
+                
+                # Individual results
                 for result in results:
                     if result['status'] == 'success':
                         st.success(f"✅ {result['name']}: Updated successfully")
