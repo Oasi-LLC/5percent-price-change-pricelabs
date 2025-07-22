@@ -1,10 +1,102 @@
 import streamlit as st
 import time
-from pricelabs_tool.api_client import PriceLabsAPI
-from pricelabs_tool.price_calculator import calculate_adjusted_price
+import os
+import requests
+from typing import List, Dict, Optional
+from datetime import datetime
+import logging
+from dotenv import load_dotenv
 
-st.set_page_config(page_title="PriceLabs Price Adjustment", layout="centered")
-st.title("PriceLabs Price Adjustment Tool")
+# Load environment variables
+load_dotenv()
+
+# Configuration
+API_KEY = os.getenv('PRICELABS_API_KEY')
+BASE_URL = os.getenv('API_BASE_URL', 'https://api.pricelabs.co/v1')
+ADJUSTMENT_PERCENTAGE = 5  # 5% adjustment
+
+# Validation
+if not API_KEY:
+    st.error("PRICELABS_API_KEY environment variable is required")
+    st.stop()
+
+logger = logging.getLogger(__name__)
+
+class PriceLabsAPI:
+    def __init__(self):
+        self.api_key = API_KEY
+        if not self.api_key:
+            raise ValueError("PRICELABS_API_KEY environment variable is required")
+        
+        self.base_url = BASE_URL
+        self.session = requests.Session()
+        self.session.headers.update({
+            'X-API-Key': self.api_key,
+            'Content-Type': 'application/json'
+        })
+
+    def get_listings(self) -> List[Dict]:
+        """Get all active listings"""
+        response = self.session.get(f"{self.base_url}/listings")
+        response.raise_for_status()
+        
+        data = response.json()
+        return data.get('listings', []) if isinstance(data, dict) else []
+
+    def get_listing_overrides(self, listing_id: str, pms: str = None) -> Dict:
+        """Fetch overrides for a specific listing"""
+        try:
+            params = {}
+            if pms:
+                params['pms'] = pms
+                
+            response = self.session.get(
+                f"{self.base_url}/listings/{listing_id}/overrides",
+                params=params
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error fetching overrides for listing {listing_id}: {e}")
+            raise Exception(f"Error fetching overrides: {e}")
+
+    def update_listing_overrides(
+        self,
+        listing_id: str,
+        overrides: List[Dict],
+        pms: str = None,
+        update_children: bool = False
+    ) -> Dict:
+        """Update listing overrides with new prices"""
+        try:
+            payload = {
+                "update_children": update_children,
+                "overrides": overrides
+            }
+            if pms:
+                payload['pms'] = pms
+
+            response = self.session.post(
+                f"{self.base_url}/listings/{listing_id}/overrides",
+                json=payload
+            )
+            
+            if not response.ok:
+                error_detail = response.json() if response.content else "No error details"
+                logger.error(f"API error response: {error_detail}")
+            
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error updating overrides for listing {listing_id}: {e}")
+            raise Exception(f"Error updating overrides: {e}")
+
+def calculate_adjusted_price(price: float, increase: bool = True) -> float:
+    """Adjust the price by the configured percentage."""
+    if increase:
+        return price * (1 + ADJUSTMENT_PERCENTAGE / 100)
+    else:
+        return price * (1 - ADJUSTMENT_PERCENTAGE / 100)
 
 # --- Helper functions ---
 def fetch_listings():
@@ -89,10 +181,15 @@ def batch_update(listings, increase, dry_run, batch_size=20, delay=2):
             time.sleep(delay)
     return (results, dry_run_summary)
 
-# --- UI ---
+# --- Streamlit UI ---
+st.set_page_config(page_title="PriceLabs Price Adjustment", layout="centered")
+st.title("PriceLabs Price Adjustment Tool")
+
+# Initialize session state
 if 'listings' not in st.session_state:
     st.session_state['listings'] = []
 
+# Refresh listings button
 if st.button('Refresh Listings from PriceLabs'):
     with st.spinner('Fetching latest listings...'):
         st.session_state['listings'] = fetch_listings()
@@ -101,45 +198,75 @@ if st.button('Refresh Listings from PriceLabs'):
 listings = st.session_state['listings']
 
 if listings:
-    all_ids = [str(l['id']) for l in listings]
-    all_names = [f"{l['name']} ({l['id']})" for l in listings]
-    id_to_name = {str(l['id']): l['name'] for l in listings}
+    st.subheader("Select Listings to Adjust")
     
-    selected_ids = st.multiselect(
-        'Select Listings',
-        options=all_ids,
-        default=all_ids,
-        format_func=lambda x: id_to_name.get(x, x)
+    # Create a list of listing names for selection
+    listing_options = [f"{listing['name']} (ID: {listing['id']})" for listing in listings]
+    selected_listings = st.multiselect(
+        "Choose listings to adjust:",
+        listing_options,
+        default=listing_options  # Select all by default
     )
-    selected_listings = [l for l in listings if str(l['id']) in selected_ids]
     
-    col1, col2 = st.columns(2)
-    with col1:
-        adj = st.radio('Adjustment', ['Increase by 5%', 'Decrease by 5%'])
-    with col2:
-        dry_run = st.checkbox('Dry Run (Preview only)', value=True)
+    # Get the actual listing objects for selected items
+    selected_listing_objects = []
+    for option in selected_listings:
+        listing_id = option.split("(ID: ")[1].rstrip(")")
+        for listing in listings:
+            if str(listing['id']) == listing_id:
+                selected_listing_objects.append(listing)
+                break
     
-    if st.button('Apply Changes'):
-        if not selected_listings:
-            st.warning('Please select at least one listing.')
-        else:
-            increase = adj == 'Increase by 5%'
-            with st.spinner('Processing...'):
-                results, dry_run_summary = batch_update(selected_listings, increase, dry_run)
+    if selected_listing_objects:
+        st.subheader("Adjustment Options")
+        
+        # Adjustment type
+        adjustment_type = st.radio(
+            "Choose adjustment type:",
+            ["Increase by 5%", "Decrease by 5%"]
+        )
+        increase = adjustment_type == "Increase by 5%"
+        
+        # Dry run option
+        dry_run = st.checkbox("Dry run (preview changes without applying)", value=True)
+        
+        # Apply button
+        if st.button("Apply Price Adjustments", type="primary"):
             if dry_run:
-                st.subheader('Dry Run Summary')
-                for summary in dry_run_summary:
-                    st.markdown(f"**{summary['name']}** ({summary['id']}) - {summary['changes']} changes")
-                    for pc in summary.get('price_changes', []):
-                        st.write(f"{pc['date']}: {pc['old_price']} → {pc['new_price']} {pc['currency']}")
-                    if 'error' in summary:
-                        st.error(f"Error: {summary['error']}")
-            else:
-                st.subheader('Results')
-                for res in results:
-                    if res['status'] == 'success':
-                        st.success(f"{res['name']} ({res['id']}) updated successfully.")
+                st.info("Running dry run to preview changes...")
+                results, dry_run_summary = batch_update(selected_listing_objects, increase, dry_run=True)
+                
+                st.subheader("Dry Run Results")
+                for item in dry_run_summary:
+                    if 'error' in item:
+                        st.error(f"❌ {item['name']}: {item['error']}")
                     else:
-                        st.error(f"{res['name']} ({res['id']}): {res.get('message', 'Unknown error')}")
+                        st.success(f"✅ {item['name']}: {item['changes']} price changes")
+                        if item['price_changes']:
+                            st.write("Sample changes:")
+                            for change in item['price_changes'][:3]:  # Show first 3
+                                st.write(f"  {change['date']}: ${change['old_price']:.0f} → ${change['new_price']:.0f}")
+                
+                # Show actual apply button after dry run
+                if st.button("Apply Changes (after dry run)"):
+                    st.info("Applying changes...")
+                    results, _ = batch_update(selected_listing_objects, increase, dry_run=False)
+                    
+                    st.subheader("Results")
+                    for result in results:
+                        if result['status'] == 'success':
+                            st.success(f"✅ {result['name']}: Updated successfully")
+                        else:
+                            st.error(f"❌ {result['name']}: {result['message']}")
+            else:
+                st.info("Applying changes directly...")
+                results, _ = batch_update(selected_listing_objects, increase, dry_run=False)
+                
+                st.subheader("Results")
+                for result in results:
+                    if result['status'] == 'success':
+                        st.success(f"✅ {result['name']}: Updated successfully")
+                    else:
+                        st.error(f"❌ {result['name']}: {result['message']}")
 else:
     st.info('Click "Refresh Listings from PriceLabs" to begin.') 
