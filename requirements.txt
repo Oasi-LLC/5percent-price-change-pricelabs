@@ -1,11 +1,5 @@
-pinecone-client
-openai
-anthropic
-python-dotenv>=0.19.0
 streamlit
-langchain
-langchain-openai
-langchain-anthropic
+requests
+python-dotenv
 pandas
-click>=8.0.0
-requests>=2.25.0
+# pytest, click, etc. can be added if you use them in your Streamlit app or tests
