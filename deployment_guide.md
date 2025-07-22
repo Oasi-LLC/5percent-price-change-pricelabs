@@ -1,90 +1,119 @@
-# Deployment Guide: Production to Cloud
+# Deployment Guide: PriceLabs Streamlit App
 
-## Important Rules
-- NEVER merge branches directly (they have different .gitignore files)
-- NEVER try to push all files from production to cloud
-- ALWAYS respect the strict cloud .gitignore
-- ALWAYS check what files will be pushed before pushing
+This guide explains how to deploy and run the PriceLabs adjustment tool, both locally and on [Streamlit Cloud](https://share.streamlit.io/).
 
-## Step-by-Step Deployment Process
+---
 
-### 1. Backup Current Work (Optional)
-```bash
-# If you want to backup your current state
-git add .
-git commit -m "backup: Current state before deployment"
+## 📁 Project Structure
+
+```
+magic boxes/k_pricelabs5%_new/
+│
+├── streamlit_app.py                # Main Streamlit app (in project root)
+├── pricelabs_tool/                 # Business logic and helpers
+│   ├── __init__.py
+│   ├── api_client.py
+│   ├── price_calculator.py
+│   ├── config.py
+│   └── ... (other helpers, if needed)
+├── requirements.txt                # All dependencies
+├── .gitignore                      # Should include .env, venv/, etc.
+├── .env                            # (Not tracked by git) Your secrets and API keys
+├── deployment_guide.md             # This file
+└── ... (other docs, configs, etc.)
 ```
 
-### 2. Ensure Clean State
-```bash
-# Check what branch you're on
-git branch
-# Should show you're on 'production'
+---
 
-# Check if you have uncommitted changes
-git status
-# Commit any changes you want to keep
+## 🛠️ Prerequisites
+- Python 3.8+
+- [Streamlit](https://streamlit.io/)
+- [Git](https://git-scm.com/)
+- A PriceLabs API key
+
+---
+
+## 🔑 Environment Variables
+Create a `.env` file in your project root (this is git-ignored):
+
+```
+PRICELABS_API_KEY=your_pricelabs_api_key_here
+API_BASE_URL=https://api.pricelabs.co/v1
 ```
 
-### 3. Switch to Cloud Branch
-```bash
-# Switch to the cloud branch
-git checkout prod_clean
+---
 
-# IMPORTANT: Verify you're on clean state
-git status
-# Should show "nothing to commit, working tree clean"
+## 📦 Installing Dependencies
+
+```sh
+pip install -r requirements.txt
 ```
 
-### 4. Copy ONLY Required Files
-```bash
-# DO NOT use git merge!
-# Instead, copy only the specific files you updated
-# Example:
-cp ../production/app.py .
-cp ../production/requirements.txt .
-cp -r ../production/resources/ .
+---
 
-# Check what will be added
-git status
-# Should ONLY show the files you intentionally copied
+## ▶️ Running Locally
+
+**You must set the `PYTHONPATH` to your project root before running Streamlit:**
+
+### On macOS/Linux:
+```sh
+export PYTHONPATH=$(pwd)
+streamlit run streamlit_app.py
 ```
 
-### 5. Review Changes
-```bash
-# Review exactly what will be committed
-git diff
-# Make sure no unwanted files are included
+### On Windows (cmd):
+```cmd
+set PYTHONPATH=%cd%
+streamlit run streamlit_app.py
 ```
 
-### 6. Commit and Push
-```bash
-# Add only the specific files
-git add app.py requirements.txt resources/
+---
 
-# Commit with clear message
-git commit -m "update: Description of changes"
+## ☁️ Deploying to Streamlit Cloud
 
-# Push to cloud
-git push origin prod_clean
-```
+1. **Push your code to GitHub.**
+2. **Create a new app on [Streamlit Cloud](https://share.streamlit.io/).**
+3. **Set the main file to:**
+   ```
+   streamlit_app.py
+   ```
+4. **Set environment variables:**
+   - In the app settings, add your `PRICELABS_API_KEY` and (optionally) `API_BASE_URL` as secrets.
+5. **Set the Python path:**
+   - In “Advanced settings”, set the Python path to `.` (the project root), or add `export PYTHONPATH=$(pwd)` as a pre-run command if the platform allows.
+6. **Deploy!**
 
-### 7. Return to Development
-```bash
-# Switch back to production branch
-git checkout production
-```
+---
 
-## Common Mistakes to Avoid
-1. ❌ Don't use `git merge production` on prod_clean
-2. ❌ Don't copy entire directories without checking contents
-3. ❌ Don't push without checking git status
-4. ❌ Don't modify .gitignore files during deployment
+## 🔒 Security Notes
+- **Never commit your `.env` file or secrets to git.**
+- `.gitignore` should include `.env`, `venv/`, `.venv/`, etc.
+- All secrets are loaded from environment variables at runtime.
 
-## Files That Should NEVER Be in Cloud
-- data/
-- tests_parsing/
-- code_snapshot_system/
-- full_code_snapshot.txt
-- .env (use Streamlit secrets instead)
-- Any development/testing files 
+---
+
+## 🐞 Troubleshooting
+
+### ModuleNotFoundError for `pricelabs_tool`
+- Make sure you set `PYTHONPATH` as shown above.
+- On Streamlit Cloud, set the Python path to `.` or use a pre-run command.
+- Ensure `streamlit_app.py` is in the project root, not in a subfolder.
+
+### API Key Errors
+- Make sure your `PRICELABS_API_KEY` is set in your environment or Streamlit Cloud secrets.
+
+### Other Issues
+- Check logs in Streamlit Cloud (“Manage app” > “Logs”).
+- Ensure all dependencies are in `requirements.txt`.
+
+---
+
+## ✅ Best Practices
+- Keep business logic in `pricelabs_tool/`.
+- Only UI code in `streamlit_app.py`.
+- Use environment variables for all secrets.
+- Test locally before deploying.
+
+---
+
+Happy deploying! 🚀 
