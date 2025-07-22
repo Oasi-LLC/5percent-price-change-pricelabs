@@ -1,0 +1,167 @@
+# Configuration for different property groups and their listings/rate mappings.
+
+fb1: # Matches the directory name and --property argument (Original Fredericksburg)
+    # Documentation: Defines configuration for the 'fb1' property.
+    name: "Firefly Boutique 1" # User-friendly name
+    pms: cloudbeds
+    listings:
+      # Maps user-friendly listing names to their unique IDs used in data files.
+      # Ensure these IDs match those in pl_daily_*.csv etc.
+      - {name: "Cocoon", id: "203812___362535"}
+      - {name: "Walnut House", id: "203812___364773"}
+      - {name: "Spyglass", id: "203812___364776"}
+      - {name: "Live Oak Lodge", id: "203812___364778"}
+      - {name: "Lantana Dome", id: "203812___364779"}
+      - {name: "Sage Safari", id: "203812___364780"}
+      - {name: "Monarch", id: "203812___364781"}
+      - {name: "Buckeye Bungalow", id: "203812___364782"}
+      - {name: "Cedar Haus", id: "203812___490007"}
+      - {name: "Juniper Haus", id: "203812___490024"}
+      - {name: "Pecan Haus", id: "203812___528745"}
+      - {name: "Bluebonnet", id: "203812___634080"}
+    rate_group_mapping:
+      # Maps internal rate group keys (used by calculator.py)
+      # to the specific rate column NAMES in the rate_table_*.csv file.
+      # AND maps these keys to the list of listing IDs they apply to.
+      # Keys (e.g., rate_1) MUST match columns in the rate table CSV.
+      rate_2: ["203812___364780", "203812___362535", "203812___364782", "203812___364779", "203812___634080"]
+      rate_1: ["203812___364781", "203812___364776", "203812___364778", "203812___364773"]
+      rate_3: ["203812___490007", "203812___490024", "203812___528745"]
+
+fb2: # Matches the directory name and --property argument (New Fredericksburg)
+    name: "Firefly Boutique 2"
+    pms: cloudbeds
+    total_units: 20 # Sum of units below
+    listings:
+      - {name: "The Lodge", id: "203812___643757", units: 1}
+      - {name: "The Lodge: King Room", id: "203812___643775", units: 8}
+      - {name: "Monolith", id: "203812___643773", units: 2}
+      - {name: "Spiral", id: "203812___643772", units: 1}
+      - {name: "Diamond", id: "203812___643771", units: 3}
+      - {name: "Winecup", id: "203812___643766", units: 2}
+      - {name: "Quonset", id: "203812___643764", units: 2}
+      - {name: "Cypress Lodge", id: "203812___643762", units: 2}
+      - {name: "Post Oak", id: "203812___643760", units: 1}
+    rate_group_mapping:
+      rate_1: ["203812___643772", "203812___643771"] # Spiral, Diamond
+      rate_2: ["203812___643766", "203812___643764"] # Winecup, Quonset
+      rate_3: ["203812___643757"] # The Lodge
+      rate_4: ["203812___643775"] # King Room (8 units)
+      rate_5: ["203812___643773"] # Monolith (2 units)
+      rate_6: ["203812___643762"] # Cypress Lodge (2 units)
+      rate_7: ["203812___643760"] # Post Oak
+
+parcblu:
+    name: "ParcBlu"
+    pms: hostaway
+    listings:
+      - {name: "Love", id: "299754"}
+      - {name: "Peace", id: "299755"}
+      - {name: "Joy", id: "299756"}
+      - {name: "Delight", id: "299757"}
+      - {name: "Grace", id: "299758"}
+      - {name: "Dream", id: "299759"}
+      - {name: "Beauty", id: "299760"}
+    rate_group_mapping:
+      rate_1: ["299757", "299758", "299760"] # Delight, Grace, Beauty
+      rate_2: ["299754", "299755", "299756", "299759"] # Love, Peace, Joy, Dream
+
+atx:
+    name: "ATX"
+    pms: hostaway
+    listings:
+      - {name: "Coventry Ln", id: "320200"}
+      - {name: "Romney", id: "320201"}
+      - {name: "Burnhill Dr", id: "320202"}
+      - {name: "Sunstrip", id: "320203"}
+      - {name: "Malvern", id: "331303"}
+    rate_group_mapping:
+      rate_1: ["320203"] # Sunstrip
+      rate_2: ["331303"] # Malvern
+      rate_3: ["320201"] # Romney
+      rate_4: ["320202"] # Burnhill Dr
+      rate_5: ["320200"] # Coventry Ln
+
+sos:
+    name: "SOS"
+    pms: cloudbeds
+    total_units: 23 # Sum of units below (assuming villas/buyout are 1 unit each)
+    listings:
+      - {name: "Sofia Suite", id: "225828___460628", units: 1}
+      - {name: "8BR Villa", id: "225828___460647", units: 1}
+      - {name: "11BR Villa", id: "225828___460648", units: 1}
+      - {name: "12BR Villa", id: "225828___460646", units: 1}
+      - {name: "23BR Buyout", id: "225828___460659", units: 1}
+      - {name: "Deluxe King Suite", id: "225828___640390", units: 5}
+      - {name: "Queen Suite", id: "225828___640661", units: 4}
+      - {name: "King Suite (Front)", id: "225828___640662", units: 2}
+      - {name: "King Suite (Back)", id: "225828___640673", units: 4}
+      - {name: "Superior King Suite", id: "225828___640676", units: 4}
+    rate_group_mapping:
+      rate_1: ["225828___460659"] # 23BR
+      rate_2: ["225828___460647", "225828___460648", "225828___460646"] # 8BR, 11BR, 12BR
+      rate_3: ["225828___460628"] # 3BR (Sofia Suite)
+      rate_4: ["225828___640390"] # Deluxe King Suite (5 units)
+      rate_5: ["225828___640661"] # Queen Suite (4 units)
+      rate_6: ["225828___640662"] # King Suite Front (2 units)
+      rate_7: ["225828___640673"] # King Suite Back (4 units)
+      rate_8: ["225828___640676"] # Superior King Suite (4 units)
+
+spoon_mountain:
+    name: "Spoon Mountain"
+    pms: ownerrez
+    listings:
+      - {name: "Chisum", id: "278915"}
+      - {name: "Kingfisher", id: "303587"}
+      - {name: "Shaka", id: "303588"}
+    rate_group_mapping:
+      rate_1: ["278915"] # Chisum
+      rate_2: ["303587"] # Kingfisher
+      rate_3: ["303588"] # Shaka
+
+flohom:
+    name: "FLOHOM"
+    pms: hostaway
+    listings:
+      - {name: "FLOHOM 1", id: "146908"}
+      - {name: "FLOHOM 2", id: "146944"}
+      - {name: "FLOHOM 3", id: "146946"}
+      - {name: "FLOHOM 4", id: "260001"}
+      - {name: "FLOHOM 5", id: "278502"}
+      - {name: "FLOHOM 6", id: "345316"}
+      - {name: "FLOHOM 7", id: "366176"}
+      - {name: "FLOHOM 8", id: "376368"}
+    rate_group_mapping:
+      rate_1: ["146908"]
+      rate_2: ["146944"]
+      rate_3: ["146946"]
+      rate_4: ["260001"]
+      rate_5: ["278502"]
+      rate_6: ["345316"]
+      rate_7: ["366176"]
+      rate_8: ["376368"]
+
+wimberley: # Added based on user's wb1 example
+    name: "Wimberley Boutique"
+    pms: cloudbeds
+    total_units: 28  # Total units across all listings
+    listings:
+      - {name: "Greenhouse", id: "316005___633306", units: 9}
+      - {name: "Greenhouse ADA", id: "316005___633307", units: 1}
+      - {name: "Spyglass", id: "316005___633310", units: 5}
+      - {name: "Spyglass ADA", id: "316005___633311", units: 1}
+      - {name: "Greenhouse Pet", id: "316005___633308", units: 6}
+      - {name: "Spyglass Pet", id: "316005___633312", units: 6}
+    rate_group_mapping:
+      rate_1: ["316005___633306", "316005___633307"] # Greenhouse & ADA
+      rate_2: ["316005___633308"] # Greenhouse Pet
+      rate_3: ["316005___633310", "316005___633311"] # Spyglass & ADA
+      rate_4: ["316005___633312"] # Spyglass Pet
+
+# Note: Onera Wimberley listings were intentionally excluded as per request.
+#       - {name: "Greenhouse", id: "316005___633306"} # 9 units
+#       - {name: "Greenhouse (Accessible)", id: "316005___633307"}
+#       - {name: "Greenhouse (Pet Friendly)", id: "316005___633308"} # 6 units
+#       - {name: "Spyglass", id: "316005___633310"} # 5 units
+#       - {name: "Spyglass (Accessible)", id: "316005___633311"}
+#       - {name: "Spyglass (Pet Friendly)", id: "316005___633312"} # 6 units 

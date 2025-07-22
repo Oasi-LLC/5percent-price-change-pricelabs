@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const dryRun = document.getElementById('dryRun');
     const dryRunSummary = document.getElementById('dryRunSummary');
     const listingsTable = document.getElementById('listingsTable');
+    const refreshButton = document.getElementById('refreshListings');
+    const refreshStatus = document.getElementById('refreshStatus');
     let listingsData = [];
     
     // Enable/disable apply button based on selection
@@ -61,6 +63,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Refresh listings functionality
+    refreshButton.addEventListener('click', async function() {
+        refreshButton.disabled = true;
+        refreshStatus.innerHTML = '<span class="text-info">Refreshing listings...</span>';
+        
+        try {
+            const response = await fetch('/api/refresh-listings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                listingsData = data.listings;
+                renderListingsTable(listingsData);
+                refreshStatus.innerHTML = `<span class="text-success">✓ Refreshed ${data.count} listings</span>`;
+            } else {
+                refreshStatus.innerHTML = `<span class="text-danger">✗ Error: ${data.message}</span>`;
+            }
+        } catch (e) {
+            refreshStatus.innerHTML = '<span class="text-danger">✗ Network error</span>';
+        } finally {
+            refreshButton.disabled = false;
+            // Clear status after 3 seconds
+            setTimeout(() => {
+                refreshStatus.innerHTML = '';
+            }, 3000);
+        }
+    });
+
     // Load listings on page load and when PMS filter changes
     loadListings();
     
@@ -75,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        statusDiv.innerHTML = '<div class="alert alert-info">Processing...</div>';
+        statusDiv.innerHTML = '<div class="alert alert-info">Processing listings in batches of 20 to avoid rate limits...</div>';
         dryRunSummary.style.display = 'none';
         
         try {

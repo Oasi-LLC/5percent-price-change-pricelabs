@@ -1,7 +1,8 @@
 from flask import Flask, render_template, jsonify, request
-from .api_client import PriceLabsAPI
-from .price_calculator import calculate_adjusted_price
+from api_client import PriceLabsAPI
+from price_calculator import calculate_adjusted_price
 import logging
+import time
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +37,29 @@ def get_listings():
             'message': str(e)
         }), 500
 
+@app.route('/api/refresh-listings', methods=['POST'])
+def refresh_listings():
+    """Refresh listings from PriceLabs API"""
+    try:
+        api_client = PriceLabsAPI()
+        listings = api_client.get_listings()
+        active_listings = [
+            listing for listing in listings
+            if not listing.get('isHidden', True) 
+            and listing.get('push_enabled', False)
+        ]
+        return jsonify({
+            'status': 'success',
+            'listings': active_listings,
+            'count': len(active_listings)
+        })
+    except Exception as e:
+        logger.error(f"Error refreshing listings: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
 @app.route('/api/update-prices', methods=['POST'])
 def update_prices():
     try:
@@ -56,89 +80,99 @@ def update_prices():
         if listing_ids:
             active_listings = [l for l in active_listings if str(l.get('id')) in listing_ids]
         
-        # Process each listing
+        # Process listings in batches of 20 to avoid rate limits
+        batch_size = 20
         results = []
         dry_run_summary = []
-        for listing in active_listings:
-            try:
-                # Get current overrides
-                overrides = api_client.get_listing_overrides(
-                    listing['id'], 
-                    pms=listing.get('pms')
-                )
-                
-                # Calculate new prices
-                adjusted_overrides = []
-                for override in overrides.get('overrides', []):
-                    if override.get('price_type') == 'fixed':
-                        old_price = float(override.get('price', 0))
-                        if old_price > 0:
-                            new_price = calculate_adjusted_price(
-                                old_price, 
-                                increase=increase
-                            )
-                            adjusted_overrides.append({
-                                'date': override['date'],
-                                'price': str(int(new_price)),
-                                'price_type': 'fixed',
-                                'currency': override.get('currency', 'USD'),
-                                'min_stay': override.get('min_stay', 1)
-                            })
-                
-                if dry_run:
-                    # Sort overrides by date and get first 5 dates with their prices
-                    sorted_overrides = sorted(
-                        [o for o in overrides.get('overrides', []) if o.get('price_type') == 'fixed'],
-                        key=lambda x: x['date']
+        
+        for i in range(0, len(active_listings), batch_size):
+            batch = active_listings[i:i + batch_size]
+            logger.info(f"Processing batch {i//batch_size + 1} of {(len(active_listings) + batch_size - 1)//batch_size} ({len(batch)} listings)")
+            
+            # Add a small delay between batches to avoid rate limits
+            if i > 0:
+                time.sleep(2)  # 2 second delay between batches
+            
+            for listing in batch:
+                try:
+                    # Get current overrides
+                    overrides = api_client.get_listing_overrides(
+                        listing['id'], 
+                        pms=listing.get('pms')
                     )
-                    price_changes = []
-                    for override in sorted_overrides[:5]:  # Only first 5 earliest dates
-                        old_price = float(override.get('price', 0))
-                        if old_price > 0:
-                            new_price = calculate_adjusted_price(
-                                old_price, 
-                                increase=increase
-                            )
-                            price_changes.append({
-                                'date': override['date'],
-                                'old_price': old_price,
-                                'new_price': new_price,
-                                'currency': override.get('currency', 'USD')
-                            })
-                    dry_run_summary.append({
-                        'id': listing['id'],
-                        'name': listing['name'],
-                        'changes': len(adjusted_overrides),
-                        'price_changes': price_changes
-                    })
-                else:
-                    # Update prices
-                    if adjusted_overrides:
-                        api_client.update_listing_overrides(
-                            listing['id'],
-                            adjusted_overrides,
-                            pms=listing.get('pms')
+                    
+                    # Calculate new prices
+                    adjusted_overrides = []
+                    for override in overrides.get('overrides', []):
+                        if override.get('price_type') == 'fixed':
+                            old_price = float(override.get('price', 0))
+                            if old_price > 0:
+                                new_price = calculate_adjusted_price(
+                                    old_price, 
+                                    increase=increase
+                                )
+                                adjusted_overrides.append({
+                                    'date': override['date'],
+                                    'price': str(int(new_price)),
+                                    'price_type': 'fixed',
+                                    'currency': override.get('currency', 'USD'),
+                                    'min_stay': override.get('min_stay', 1)
+                                })
+                    
+                    if dry_run:
+                        # Sort overrides by date and get first 5 dates with their prices
+                        sorted_overrides = sorted(
+                            [o for o in overrides.get('overrides', []) if o.get('price_type') == 'fixed'],
+                            key=lambda x: x['date']
                         )
+                        price_changes = []
+                        for override in sorted_overrides[:5]:  # Only first 5 earliest dates
+                            old_price = float(override.get('price', 0))
+                            if old_price > 0:
+                                new_price = calculate_adjusted_price(
+                                    old_price, 
+                                    increase=increase
+                                )
+                                price_changes.append({
+                                    'date': override['date'],
+                                    'old_price': old_price,
+                                    'new_price': new_price,
+                                    'currency': override.get('currency', 'USD')
+                                })
+                        dry_run_summary.append({
+                            'id': listing['id'],
+                            'name': listing['name'],
+                            'changes': len(adjusted_overrides),
+                            'price_changes': price_changes
+                        })
+                    else:
+                        # Update prices
+                        if adjusted_overrides:
+                            api_client.update_listing_overrides(
+                                listing['id'],
+                                adjusted_overrides,
+                                pms=listing.get('pms')
+                            )
+                            results.append({
+                                'id': listing['id'],
+                                'name': listing['name'],
+                                'status': 'success'
+                            })
+                except Exception as e:
+                    if dry_run:
+                        dry_run_summary.append({
+                            'id': listing['id'],
+                            'name': listing['name'],
+                            'changes': 0,
+                            'error': str(e)
+                        })
+                    else:
                         results.append({
                             'id': listing['id'],
                             'name': listing['name'],
-                            'status': 'success'
+                            'status': 'error',
+                            'message': str(e)
                         })
-            except Exception as e:
-                if dry_run:
-                    dry_run_summary.append({
-                        'id': listing['id'],
-                        'name': listing['name'],
-                        'changes': 0,
-                        'error': str(e)
-                    })
-                else:
-                    results.append({
-                        'id': listing['id'],
-                        'name': listing['name'],
-                        'status': 'error',
-                        'message': str(e)
-                    })
         
         if dry_run:
             return jsonify({

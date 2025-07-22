@@ -1,6 +1,6 @@
 from typing import List, Dict, Optional
 import logging
-from .config import ADJUSTMENT_PERCENTAGE
+from config import ADJUSTMENT_PERCENTAGE
 
 logger = logging.getLogger(__name__)
 

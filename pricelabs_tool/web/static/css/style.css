@@ -34,4 +34,25 @@ h1 {
 
 .btn-primary:disabled {
     cursor: not-allowed;
+}
+
+#refreshListings {
+    min-width: 200px;
+}
+
+#refreshStatus {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+#refreshStatus .text-success {
+    color: #28a745 !important;
+}
+
+#refreshStatus .text-danger {
+    color: #dc3545 !important;
+}
+
+#refreshStatus .text-info {
+    color: #17a2b8 !important;
 } 
