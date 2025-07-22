@@ -4,7 +4,7 @@ from typing import List, Dict, Optional
 from datetime import datetime
 import logging
 from dotenv import load_dotenv
-from config import API_KEY, BASE_URL
+from pricelabs_tool.config import API_KEY, BASE_URL
 
 logger = logging.getLogger(__name__)
 

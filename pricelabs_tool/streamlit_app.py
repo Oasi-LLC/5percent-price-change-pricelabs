@@ -1,7 +1,7 @@
 import streamlit as st
 import time
-from api_client import PriceLabsAPI
-from price_calculator import calculate_adjusted_price
+from pricelabs_tool.api_client import PriceLabsAPI
+from pricelabs_tool.price_calculator import calculate_adjusted_price
 
 st.set_page_config(page_title="PriceLabs Price Adjustment", layout="centered")
 st.title("PriceLabs Price Adjustment Tool")

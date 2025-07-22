@@ -1,19 +1,19 @@
 from typing import List, Dict, Optional
 import logging
-from config import ADJUSTMENT_PERCENTAGE
+from pricelabs_tool.config import ADJUSTMENT_PERCENTAGE
 
 logger = logging.getLogger(__name__)
 
 def calculate_adjusted_price(price: float, increase: bool = True) -> float:
     """
-    Calculate adjusted price based on percentage and round to integer
-    
+    Adjust the price by the configured percentage.
     Args:
-        price: Current price
-        increase: Whether to increase or decrease
-    
+        price: The original price
+        increase: If True, increase by percentage; else decrease
     Returns:
-        Adjusted price as integer
+        Adjusted price
     """
-    adjustment = 1 + (ADJUSTMENT_PERCENTAGE / 100 * (1 if increase else -1))
-    return round(price * adjustment)  # Round to integer 
+    if increase:
+        return price * (1 + ADJUSTMENT_PERCENTAGE / 100)
+    else:
+        return price * (1 - ADJUSTMENT_PERCENTAGE / 100) 
