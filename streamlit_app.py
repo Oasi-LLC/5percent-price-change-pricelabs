@@ -14,6 +14,7 @@ load_dotenv()
 API_KEY = os.getenv('PRICELABS_API_KEY')
 BASE_URL = os.getenv('API_BASE_URL', 'https://api.pricelabs.co/v1')
 ADJUSTMENT_PERCENTAGE = 5  # 5% adjustment
+APP_PASSWORD = os.getenv('APP_PASSWORD')  # Optional: when set, requires @stayoasi.com + this password to access
 
 # Validation
 if not API_KEY:
@@ -108,9 +109,8 @@ def fetch_listings():
     ]
     return active_listings
 
-def batch_update(listings, increase, dry_run, batch_size=20, delay=2):
+def batch_update(listings, increase, batch_size=20, delay=2):
     results = []
-    dry_run_summary = []
     total = len(listings)
     for i in range(0, total, batch_size):
         batch = listings[i:i+batch_size]
@@ -132,58 +132,55 @@ def batch_update(listings, increase, dry_run, batch_size=20, delay=2):
                                 'currency': override.get('currency', 'USD'),
                                 'min_stay': override.get('min_stay', 1)
                             })
-                if dry_run:
-                    sorted_overrides = sorted(
-                        [o for o in overrides.get('overrides', []) if o.get('price_type') == 'fixed'],
-                        key=lambda x: x['date']
-                    )
-                    price_changes = []
-                    for override in sorted_overrides[:5]:
-                        old_price = float(override.get('price', 0))
-                        if old_price > 0:
-                            new_price = calculate_adjusted_price(old_price, increase=increase)
-                            price_changes.append({
-                                'date': override['date'],
-                                'old_price': old_price,
-                                'new_price': new_price,
-                                'currency': override.get('currency', 'USD')
-                            })
-                    dry_run_summary.append({
-                        'id': listing['id'],
-                        'name': listing['name'],
-                        'changes': len(adjusted_overrides),
-                        'price_changes': price_changes
-                    })
-                else:
-                    if adjusted_overrides:
-                        api_client.update_listing_overrides(listing['id'], adjusted_overrides, pms=listing.get('pms'))
-                        results.append({
-                            'id': listing['id'],
-                            'name': listing['name'],
-                            'status': 'success'
-                        })
-            except Exception as e:
-                if dry_run:
-                    dry_run_summary.append({
-                        'id': listing['id'],
-                        'name': listing['name'],
-                        'changes': 0,
-                        'error': str(e)
-                    })
-                else:
+                if adjusted_overrides:
+                    api_client.update_listing_overrides(listing['id'], adjusted_overrides, pms=listing.get('pms'))
                     results.append({
                         'id': listing['id'],
                         'name': listing['name'],
-                        'status': 'error',
-                        'message': str(e)
+                        'status': 'success'
                     })
+            except Exception as e:
+                results.append({
+                    'id': listing['id'],
+                    'name': listing['name'],
+                    'status': 'error',
+                    'message': str(e)
+                })
         if i + batch_size < total:
             time.sleep(delay)
-    return (results, dry_run_summary)
+    return results
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="PriceLabs Price Adjustment", layout="centered")
+
+# Password protection: when APP_PASSWORD is set, only @stayoasi.com + password can access
+ALLOWED_DOMAIN = "@stayoasi.com"
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+if APP_PASSWORD and not st.session_state["authenticated"]:
+    st.title("Sign in")
+    email = st.text_input("Email", placeholder="you@stayoasi.com")
+    password = st.text_input("Password", type="password", placeholder="Shared app password")
+    if st.button("Sign in"):
+        email_clean = (email or "").strip().lower()
+        if not email_clean.endswith(ALLOWED_DOMAIN):
+            st.error("Access is restricted to " + ALLOWED_DOMAIN + " addresses.")
+        elif password != APP_PASSWORD:
+            st.error("Incorrect password.")
+        else:
+            st.session_state["authenticated"] = True
+            st.rerun()
+    st.stop()
+
 st.title("PriceLabs Price Adjustment Tool")
+
+# Logout in sidebar (only when password protection is on)
+if APP_PASSWORD:
+    with st.sidebar:
+        if st.button("Log out"):
+            st.session_state["authenticated"] = False
+            st.rerun()
 
 # Initialize session state
 if 'listings' not in st.session_state:
@@ -237,97 +234,32 @@ if listings:
         )
         increase = adjustment_type == "Increase by 5%"
         
-        # Dry run option
-        dry_run = st.checkbox("Dry run (preview changes without applying)", value=True)
-        
         # Apply button
         if st.button("Apply Price Adjustments", type="primary"):
-            if dry_run:
-                st.info("Running dry run to preview changes...")
-                results, dry_run_summary = batch_update(selected_listing_objects, increase, dry_run=True)
-                
-                # Calculate dry run totals
-                total_changes = sum([item.get('changes', 0) for item in dry_run_summary if 'error' not in item])
-                total_listings = len(dry_run_summary)
-                successful_dry_run = len([item for item in dry_run_summary if 'error' not in item])
-                failed_dry_run = len([item for item in dry_run_summary if 'error' in item])
-                
-                st.subheader("Dry Run Results")
-                
-                # Summary stats for dry run
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Listings Processed", total_listings)
-                with col2:
-                    st.metric("Successful", successful_dry_run, delta=f"+{successful_dry_run}")
-                with col3:
-                    st.metric("Failed", failed_dry_run, delta=f"-{failed_dry_run}")
-                with col4:
-                    st.metric("Total Price Changes", total_changes)
-                
-                # Individual results
-                for item in dry_run_summary:
-                    if 'error' in item:
-                        st.error(f"❌ {item['name']}: {item['error']}")
-                    else:
-                        st.success(f"✅ {item['name']}: {item['changes']} price changes")
-                        if item['price_changes']:
-                            st.write("Sample changes:")
-                            for change in item['price_changes'][:3]:  # Show first 3
-                                st.write(f"  {change['date']}: ${change['old_price']:.0f} → ${change['new_price']:.0f}")
-                
-                # Show actual apply button after dry run
-                if st.button("Apply Changes (after dry run)"):
-                    st.info("Applying changes...")
-                    results, _ = batch_update(selected_listing_objects, increase, dry_run=False)
-                    
-                    # Calculate totals
-                    successful = len([r for r in results if r['status'] == 'success'])
-                    failed = len([r for r in results if r['status'] == 'error'])
-                    total = len(results)
-                    
-                    st.subheader("Results")
-                    
-                    # Summary stats
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Total Processed", total)
-                    with col2:
-                        st.metric("Successful", successful, delta=f"+{successful}")
-                    with col3:
-                        st.metric("Failed", failed, delta=f"-{failed}")
-                    
-                    # Individual results
-                    for result in results:
-                        if result['status'] == 'success':
-                            st.success(f"✅ {result['name']}: Updated successfully")
-                        else:
-                            st.error(f"❌ {result['name']}: {result['message']}")
-            else:
-                st.info("Applying changes directly...")
-                results, _ = batch_update(selected_listing_objects, increase, dry_run=False)
-                
-                # Calculate totals
-                successful = len([r for r in results if r['status'] == 'success'])
-                failed = len([r for r in results if r['status'] == 'error'])
-                total = len(results)
-                
-                st.subheader("Results")
-                
-                # Summary stats
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Total Processed", total)
-                with col2:
-                    st.metric("Successful", successful, delta=f"+{successful}")
-                with col3:
-                    st.metric("Failed", failed, delta=f"-{failed}")
-                
-                # Individual results
-                for result in results:
-                    if result['status'] == 'success':
-                        st.success(f"✅ {result['name']}: Updated successfully")
-                    else:
-                        st.error(f"❌ {result['name']}: {result['message']}")
+            st.info("Applying changes...")
+            results = batch_update(selected_listing_objects, increase)
+            
+            # Calculate totals
+            successful = len([r for r in results if r['status'] == 'success'])
+            failed = len([r for r in results if r['status'] == 'error'])
+            total = len(results)
+            
+            st.subheader("Results")
+            
+            # Summary stats
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Processed", total)
+            with col2:
+                st.metric("Successful", successful, delta=f"+{successful}")
+            with col3:
+                st.metric("Failed", failed, delta=f"-{failed}")
+            
+            # Individual results
+            for result in results:
+                if result['status'] == 'success':
+                    st.success(f"✅ {result['name']}: Updated successfully")
+                else:
+                    st.error(f"❌ {result['name']}: {result['message']}")
 else:
     st.info('Click "Refresh Listings from PriceLabs" to begin.') 
