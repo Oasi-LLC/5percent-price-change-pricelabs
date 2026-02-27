@@ -2,8 +2,11 @@ import streamlit as st
 import time
 import os
 import requests
-from typing import List, Dict, Optional
-from datetime import datetime
+import yaml
+from pathlib import Path
+from typing import List, Dict, Optional, Tuple
+from datetime import datetime, timedelta
+from itertools import groupby
 import logging
 from dotenv import load_dotenv
 
@@ -99,6 +102,52 @@ def calculate_adjusted_price(price: float, increase: bool = True) -> float:
     else:
         return price * (1 - ADJUSTMENT_PERCENTAGE / 100)
 
+
+def _is_date_in_valid_range(date_str: str) -> bool:
+    """PriceLabs API: date must be in future and less than 2 years from today."""
+    try:
+        d = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return False
+    today = datetime.now().date()
+    two_years_later = today + timedelta(days=730)  # ~2 years
+    return today < d <= two_years_later
+
+# --- Property config (for grouping/sorting) ---
+def _load_property_config() -> Dict:
+    """Load properties_config.yaml; return {} if missing. Supports top-level 'properties:' key."""
+    path = Path(__file__).resolve().parent / "properties_config.yaml"
+    if not path.exists():
+        return {}
+    with open(path) as f:
+        data = yaml.safe_load(f) or {}
+    return data.get("properties", data)
+
+
+def _listing_to_property(listing_id: str, config: Dict) -> Tuple[str, str]:
+    """Return (sort_key, display_name) for the listing's property. Unknown -> ('zz_Other', 'Other')."""
+    lid = str(listing_id)
+    for prop_key, prop_data in config.items():
+        if not isinstance(prop_data, dict):
+            continue
+        for entry in prop_data.get("listings", []):
+            if str(entry.get("id")) == lid:
+                return (prop_key, prop_data.get("name", prop_key))
+    return ("zz_Other", "Other")
+
+
+def _sort_listings_by_property(listings: List[Dict], config: Dict) -> List[Dict]:
+    """Sort by property (same property together), then by listing name."""
+    return sorted(
+        listings,
+        key=lambda L: (
+            _listing_to_property(L.get("id"), config)[0],
+            _listing_to_property(L.get("id"), config)[1],
+            (L.get("name") or ""),
+        ),
+    )
+
+
 # --- Helper functions ---
 def fetch_listings():
     api_client = PriceLabsAPI()
@@ -121,17 +170,21 @@ def batch_update(listings, increase, batch_size=20, delay=2):
                 overrides = api_client.get_listing_overrides(listing['id'], pms=listing.get('pms'))
                 adjusted_overrides = []
                 for override in overrides.get('overrides', []):
-                    if override.get('price_type') == 'fixed':
-                        old_price = float(override.get('price', 0))
-                        if old_price > 0:
-                            new_price = calculate_adjusted_price(old_price, increase=increase)
-                            adjusted_overrides.append({
-                                'date': override['date'],
-                                'price': str(int(new_price)),
-                                'price_type': 'fixed',
-                                'currency': override.get('currency', 'USD'),
-                                'min_stay': override.get('min_stay', 1)
-                            })
+                    if override.get('price_type') != 'fixed':
+                        continue
+                    if not _is_date_in_valid_range(override.get('date', '')):
+                        continue
+                    old_price = float(override.get('price', 0))
+                    if old_price <= 0:
+                        continue
+                    new_price = calculate_adjusted_price(old_price, increase=increase)
+                    adjusted_overrides.append({
+                        'date': override['date'],
+                        'price': str(int(new_price)),
+                        'price_type': 'fixed',
+                        'currency': override.get('currency', 'USD'),
+                        'min_stay': override.get('min_stay', 1)
+                    })
                 if adjusted_overrides:
                     api_client.update_listing_overrides(listing['id'], adjusted_overrides, pms=listing.get('pms'))
                     results.append({
@@ -205,25 +258,55 @@ if st.button('Refresh Listings from PriceLabs'):
 listings = st.session_state['listings']
 
 if listings:
-    st.subheader("Select Listings to Adjust")
-    
-    # Create a list of listing names for selection
-    listing_options = [f"{listing['name']} (ID: {listing['id']})" for listing in listings]
-    selected_listings = st.multiselect(
-        "Choose listings to adjust:",
-        listing_options,
-        default=listing_options  # Select all by default
-    )
-    
-    # Get the actual listing objects for selected items
-    selected_listing_objects = []
-    for option in selected_listings:
-        listing_id = option.split("(ID: ")[1].rstrip(")")
-        for listing in listings:
-            if str(listing['id']) == listing_id:
-                selected_listing_objects.append(listing)
-                break
-    
+    prop_config = _load_property_config()
+    sorted_listings = _sort_listings_by_property(listings, prop_config)
+
+    # Initialize checkbox state for all listings (default True) so we only use session state, not value=
+    for L in sorted_listings:
+        st.session_state.setdefault("cb_" + str(L["id"]), True)
+
+    # Checkboxes inside a dropdown (expander)
+    n_selected = sum(1 for L in sorted_listings if st.session_state.get("cb_" + str(L["id"]), True))
+    with st.expander(f"Select listings to adjust ({n_selected} selected)", expanded=False):
+        # Equal-width columns and min-width on buttons so "Deselect all" doesn't wrap and both match size
+        st.markdown(
+            """<style>
+            [data-testid="stExpander"] [data-testid="column"]:nth-child(1) button,
+            [data-testid="stExpander"] [data-testid="column"]:nth-child(2) button { min-width: 7.5rem; }
+            </style>""",
+            unsafe_allow_html=True,
+        )
+        col_sel, col_desel = st.columns(2)
+        with col_sel:
+            if st.button("Select all", key="select_all_listings"):
+                for L in sorted_listings:
+                    st.session_state["cb_" + str(L["id"])] = True
+                st.rerun()
+        with col_desel:
+            if st.button("Deselect all", key="deselect_all_listings"):
+                for L in sorted_listings:
+                    st.session_state["cb_" + str(L["id"])] = False
+                st.rerun()
+
+        def _property_display_name(L: Dict) -> str:
+            return _listing_to_property(L.get("id"), prop_config)[1]
+
+        for prop_display_name, group in groupby(sorted_listings, key=_property_display_name):
+            st.markdown(f"**{prop_display_name}**")
+            for listing in group:
+                cb_key = "cb_" + str(listing["id"])
+                st.checkbox(
+                    listing.get("name", listing["id"]),
+                    key=cb_key,
+                )
+            st.divider()
+
+    # Selected = checkboxes that are checked
+    selected_listing_objects = [
+        L for L in sorted_listings
+        if st.session_state.get("cb_" + str(L["id"]), True)
+    ]
+
     if selected_listing_objects:
         st.subheader("Adjustment Options")
         

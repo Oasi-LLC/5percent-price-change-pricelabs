@@ -2,4 +2,5 @@ streamlit
 requests
 python-dotenv
 pandas
+PyYAML
 # pytest, click, etc. can be added if you use them in your Streamlit app or tests
