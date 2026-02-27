@@ -104,14 +104,14 @@ def calculate_adjusted_price(price: float, increase: bool = True) -> float:
 
 
 def _is_date_in_valid_range(date_str: str) -> bool:
-    """PriceLabs API: date must be in future and less than 2 years from today."""
+    """PriceLabs API: date must be in future and less than 1 year from today."""
     try:
         d = datetime.strptime(date_str, "%Y-%m-%d").date()
     except (ValueError, TypeError):
         return False
     today = datetime.now().date()
-    two_years_later = today + timedelta(days=730)  # ~2 years
-    return today < d <= two_years_later
+    one_year_later = today + timedelta(days=365)
+    return today < d <= one_year_later
 
 # --- Property config (for grouping/sorting) ---
 def _load_property_config() -> Dict:
