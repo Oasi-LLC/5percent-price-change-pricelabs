@@ -3,6 +3,7 @@ import time
 import os
 import requests
 import yaml
+import pandas as pd
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
@@ -24,6 +25,12 @@ if not API_KEY:
     st.error("PRICELABS_API_KEY environment variable is required")
     st.stop()
 
+# Logging: INFO so we can see pulled rates and after-change rates (e.g. in terminal when running streamlit)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 class PriceLabsAPI:
@@ -62,7 +69,7 @@ class PriceLabsAPI:
             return response.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching overrides for listing {listing_id}: {e}")
-            raise Exception(f"Error fetching overrides: {e}")
+            raise
 
     def update_listing_overrides(
         self,
@@ -93,7 +100,7 @@ class PriceLabsAPI:
             return response.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"Error updating overrides for listing {listing_id}: {e}")
-            raise Exception(f"Error updating overrides: {e}")
+            raise
 
 def calculate_adjusted_price(price: float, increase: bool = True) -> float:
     """Adjust the price by the configured percentage."""
@@ -136,6 +143,11 @@ def _listing_to_property(listing_id: str, config: Dict) -> Tuple[str, str]:
     return ("zz_Other", "Other")
 
 
+# Retry: any failure is retried for that listing
+MAX_RETRIES_PER_LISTING = 3
+RETRY_BACKOFF_SECONDS = (5, 10)  # wait 5s after first failure, 10s after second
+
+
 def _sort_listings_by_property(listings: List[Dict], config: Dict) -> List[Dict]:
     """Sort by property (same property together), then by listing name."""
     return sorted(
@@ -158,47 +170,110 @@ def fetch_listings():
     ]
     return active_listings
 
-def batch_update(listings, increase, batch_size=20, delay=2):
+def batch_update(listings, increase, batch_size=10, delay=2, per_listing_delay=2):
+    """Process listings in batches with per-listing and between-batch delays to avoid rate limits.
+    batch_size=10 keeps request bursts smaller; per_listing_delay=2 ~1 req/sec per listing. Increase delay if you see 429s."""
+    prop_config = _load_property_config()
     results = []
     total = len(listings)
     for i in range(0, total, batch_size):
         batch = listings[i:i+batch_size]
         st.info(f"Processing batch {i//batch_size+1} of {(total+batch_size-1)//batch_size} ({len(batch)} listings)")
         for listing in batch:
-            try:
-                api_client = PriceLabsAPI()
-                overrides = api_client.get_listing_overrides(listing['id'], pms=listing.get('pms'))
-                adjusted_overrides = []
-                for override in overrides.get('overrides', []):
-                    if override.get('price_type') != 'fixed':
-                        continue
-                    if not _is_date_in_valid_range(override.get('date', '')):
-                        continue
-                    old_price = float(override.get('price', 0))
-                    if old_price <= 0:
-                        continue
-                    new_price = calculate_adjusted_price(old_price, increase=increase)
-                    adjusted_overrides.append({
-                        'date': override['date'],
-                        'price': str(int(new_price)),
-                        'price_type': 'fixed',
-                        'currency': override.get('currency', 'USD'),
-                        'min_stay': override.get('min_stay', 1)
-                    })
-                if adjusted_overrides:
-                    api_client.update_listing_overrides(listing['id'], adjusted_overrides, pms=listing.get('pms'))
+            last_error = None
+            for attempt in range(MAX_RETRIES_PER_LISTING):
+                try:
+                    api_client = PriceLabsAPI()
+                    overrides = api_client.get_listing_overrides(listing['id'], pms=listing.get('pms'))
+                    all_pulled = overrides.get('overrides', [])
+                    logger.info(
+                        "listing_id=%s name=%s pulled_overrides_count=%s sample=%s",
+                        listing.get('id'), listing.get('name'), len(all_pulled),
+                        [(o.get('date'), o.get('price'), o.get('price_type')) for o in all_pulled[:5]]
+                    )
+                    adjusted_overrides = []
+                    skipped_not_fixed = 0
+                    skipped_date_range = 0
+                    skipped_bad_price = 0
+                    pulled_qualifying = []  # (date, old_price) for logging
+                    for override in all_pulled:
+                        if override.get('price_type') != 'fixed':
+                            skipped_not_fixed += 1
+                            continue
+                        if not _is_date_in_valid_range(override.get('date', '')):
+                            skipped_date_range += 1
+                            continue
+                        old_price = float(override.get('price', 0))
+                        if old_price <= 0:
+                            skipped_bad_price += 1
+                            continue
+                        new_price = calculate_adjusted_price(old_price, increase=increase)
+                        pulled_qualifying.append((override['date'], old_price, new_price))
+                        adjusted_overrides.append({
+                            'date': override['date'],
+                            'price': str(int(new_price)),
+                            'price_type': 'fixed',
+                            'currency': override.get('currency', 'USD'),
+                            'min_stay': override.get('min_stay', 1)
+                        })
+                    num_qualifying = len(adjusted_overrides)
+                    if pulled_qualifying:
+                        sample = [(d, f"{p_old:.0f}->{p_new:.0f}") for d, p_old, p_new in pulled_qualifying[:10]]
+                        logger.info(
+                            "listing_id=%s name=%s after_change sample_rates=%s direction=%s",
+                            listing.get('id'), listing.get('name'), sample, "increase" if increase else "decrease"
+                        )
+                    num_skipped = skipped_not_fixed + skipped_date_range + skipped_bad_price
+                    if num_qualifying == 0:
+                        msg = 'No overrides in valid range (fixed, future, ≤1 year) to update'
+                        if all_pulled:
+                            msg += f'. Pulled {len(all_pulled)} total (skipped: {skipped_not_fixed} non-fixed, {skipped_date_range} out of date range, {skipped_bad_price} bad price)'
+                        results.append({
+                            'id': listing['id'],
+                            'name': listing['name'],
+                            'status': 'skipped',
+                            'message': msg
+                        })
+                        last_error = None
+                        break
+                    # Send the full set of qualifying overrides; success only if we update all of them
+                    # Some properties (e.g. FLOHOM/Hostaway) need update_children=True for changes to appear
+                    prop_key = _listing_to_property(str(listing.get('id')), prop_config)[0]
+                    prop_data = prop_config.get(prop_key) if isinstance(prop_config.get(prop_key), dict) else {}
+                    update_children = prop_data.get('update_children', False)
+                    if update_children:
+                        logger.info("listing_id=%s name=%s update_children=true (property=%s)", listing.get('id'), listing.get('name'), prop_key)
+                    api_client.update_listing_overrides(
+                        listing['id'], adjusted_overrides, pms=listing.get('pms'), update_children=update_children
+                    )
                     results.append({
                         'id': listing['id'],
                         'name': listing['name'],
-                        'status': 'success'
+                        'status': 'success',
+                        'dates_updated': num_qualifying,
+                        'skipped_count': num_skipped,
+                        'skipped_not_fixed': skipped_not_fixed,
+                        'skipped_date_range': skipped_date_range,
+                        'skipped_bad_price': skipped_bad_price
                     })
-            except Exception as e:
-                results.append({
-                    'id': listing['id'],
-                    'name': listing['name'],
-                    'status': 'error',
-                    'message': str(e)
-                })
+                    last_error = None
+                    break
+                except Exception as e:
+                    last_error = e
+                    if attempt < MAX_RETRIES_PER_LISTING - 1:
+                        wait = RETRY_BACKOFF_SECONDS[attempt] if attempt < len(RETRY_BACKOFF_SECONDS) else 10
+                        logger.warning(f"Listing {listing.get('id')} attempt {attempt + 1} failed ({e}); retrying in {wait}s")
+                        time.sleep(wait)
+                    else:
+                        results.append({
+                            'id': listing['id'],
+                            'name': listing['name'],
+                            'status': 'error',
+                            'message': str(last_error)
+                        })
+                        break
+            # Throttle after each listing to avoid rate limits
+            time.sleep(per_listing_delay)
         if i + batch_size < total:
             time.sleep(delay)
     return results
@@ -238,6 +313,10 @@ if APP_PASSWORD:
 # Initialize session state
 if 'listings' not in st.session_state:
     st.session_state['listings'] = []
+if 'failed_listings' not in st.session_state:
+    st.session_state['failed_listings'] = []
+if 'last_increase' not in st.session_state:
+    st.session_state['last_increase'] = True
 
 # Refresh listings button
 if st.button('Refresh Listings from PriceLabs'):
@@ -267,7 +346,8 @@ if listings:
 
     # Checkboxes inside a dropdown (expander)
     n_selected = sum(1 for L in sorted_listings if st.session_state.get("cb_" + str(L["id"]), True))
-    with st.expander(f"Select listings to adjust ({n_selected} selected)", expanded=False):
+    # Keep expander open (expanded=True) so it doesn't close on checkbox click and force repeated scroll to FLOHOM etc.
+    with st.expander(f"Select listings to adjust ({n_selected} selected)", expanded=True):
         # Equal-width columns and min-width on buttons so "Deselect all" doesn't wrap and both match size
         st.markdown(
             """<style>
@@ -322,27 +402,76 @@ if listings:
             st.info("Applying changes...")
             results = batch_update(selected_listing_objects, increase)
             
+            # Store failed listings (errors only; skipped are not retryable) and last adjustment direction
+            st.session_state['failed_listings'] = [r for r in results if r['status'] == 'error']
+            st.session_state['last_increase'] = increase
+            
             # Calculate totals
             successful = len([r for r in results if r['status'] == 'success'])
             failed = len([r for r in results if r['status'] == 'error'])
+            skipped = len([r for r in results if r['status'] == 'skipped'])
             total = len(results)
             
             st.subheader("Results")
             
-            # Summary stats
-            col1, col2, col3 = st.columns(3)
+            # Summary stats: success = all qualifying dates for that listing were updated
+            col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Total Processed", total)
             with col2:
-                st.metric("Successful", successful, delta=f"+{successful}")
+                st.metric("Successful", successful, delta=f"+{successful}" if successful else None)
             with col3:
-                st.metric("Failed", failed, delta=f"-{failed}")
+                st.metric("Failed", failed, delta=f"-{failed}" if failed else None)
+            with col4:
+                st.metric("Skipped", skipped, delta=f"-{skipped}" if skipped else None)
             
-            # Individual results
+            # Individual results: success means all pulled qualifying dates were updated
             for result in results:
                 if result['status'] == 'success':
-                    st.success(f"✅ {result['name']}: Updated successfully")
+                    n = result.get('dates_updated', 0)
+                    skip = result.get('skipped_count', 0)
+                    if skip:
+                        parts = []
+                        if result.get('skipped_not_fixed'):
+                            parts.append(f"{result['skipped_not_fixed']} non-fixed")
+                        if result.get('skipped_date_range'):
+                            parts.append(f"{result['skipped_date_range']} out of date range")
+                        if result.get('skipped_bad_price'):
+                            parts.append(f"{result['skipped_bad_price']} bad price")
+                        st.success(f"✅ {result['name']}: All {n} date(s) updated. {skip} override(s) in PriceLabs not changed: {', '.join(parts)}.")
+                    else:
+                        st.success(f"✅ {result['name']}: All {n} date(s) updated successfully")
+                elif result['status'] == 'skipped':
+                    st.warning(f"⏭️ {result['name']}: {result.get('message', 'Skipped')}")
                 else:
                     st.error(f"❌ {result['name']}: {result['message']}")
+
+    # Failed listings table and manual retry (shown whenever there are stored failures)
+    failed_listings = st.session_state.get('failed_listings', [])
+    if failed_listings:
+        st.subheader("Failed listings (retry manually)")
+        # Table: Name, Listing ID, Error
+        failed_df = pd.DataFrame([
+            {"Name": r["name"], "Listing ID": r["id"], "Error": r.get("message", "")}
+            for r in failed_listings
+        ])
+        st.dataframe(failed_df, use_container_width=True, hide_index=True)
+        if st.button("Retry failed listings", key="retry_failed_listings"):
+            # Resolve full listing objects from current listings by id
+            failed_ids = {r["id"] for r in failed_listings}
+            retry_objects = [L for L in sorted_listings if L.get("id") in failed_ids]
+            if not retry_objects:
+                st.warning("Could not find listing details for failed IDs. Click 'Refresh Listings from PriceLabs' and try again.")
+            else:
+                with st.spinner("Retrying failed listings..."):
+                    retry_results = batch_update(retry_objects, st.session_state['last_increase'])
+                still_failed = [r for r in retry_results if r['status'] == 'error']
+                st.session_state['failed_listings'] = still_failed
+                retried_ok = len(retry_results) - len(still_failed)
+                if still_failed:
+                    st.warning(f"Retry complete: {retried_ok} succeeded, {len(still_failed)} still failed.")
+                else:
+                    st.success(f"All {len(retry_results)} listings updated successfully.")
+                st.rerun()
 else:
     st.info('Click "Refresh Listings from PriceLabs" to begin.') 

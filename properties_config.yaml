@@ -60,22 +60,22 @@ properties:
       rate_3: ["316005___633310", "316005___633311"]
       rate_4: ["316005___633312"]
 
-  pblu1:
-    name: "ParcBlu"
-    pms: hostaway
-    listings:
-      - {name: "Love", id: "299754", batna: 120.00}
-      - {name: "Peace", id: "299755", batna: 120.00}
-      - {name: "Joy", id: "299756", batna: 120.00}
-      - {name: "Delight", id: "299757", batna: 140.00}
-      - {name: "Grace", id: "299758", batna: 140.00}
-      - {name: "Dream", id: "299759", batna: 120.00}
-      - {name: "Beauty", id: "299760", batna: 140.00}
-      - {name: "Unit #15 - Livin' the Dream -- Cozy Camper Retreat for Two", id: "465407", batna: 100.00}
-      - {name: "Unit #11 - Favored -- Private Glass Cabin with Covered Porch and Hot Tub", id: "465408", batna: 200.00}
-    rate_group_mapping:
-      rate_1: ["299757", "299758", "299760"]
-      rate_2: ["299754", "299755", "299756", "299759", "465407", "465408"]
+  # pblu1:
+  #   name: "ParcBlu"
+  #   pms: hostaway
+  #   listings:
+  #     - {name: "Love", id: "299754", batna: 120.00}
+  #     - {name: "Peace", id: "299755", batna: 120.00}
+  #     - {name: "Joy", id: "299756", batna: 120.00}
+  #     - {name: "Delight", id: "299757", batna: 140.00}
+  #     - {name: "Grace", id: "299758", batna: 140.00}
+  #     - {name: "Dream", id: "299759", batna: 120.00}
+  #     - {name: "Beauty", id: "299760", batna: 140.00}
+  #     - {name: "Unit #15 - Livin' the Dream -- Cozy Camper Retreat for Two", id: "465407", batna: 100.00}
+  #     - {name: "Unit #11 - Favored -- Private Glass Cabin with Covered Porch and Hot Tub", id: "465408", batna: 200.00}
+  #   rate_group_mapping:
+  #     rate_1: ["299757", "299758", "299760"]
+  #     rate_2: ["299754", "299755", "299756", "299759", "465407", "465408"]
 
   atx1:
     name: "Austin"
@@ -114,6 +114,7 @@ properties:
   flo1:
     name: "FLOHOM"
     pms: hostaway
+    update_children: true   # Hostaway/FLOHOM: push to child listings so changes appear in PriceLabs
     listings:
       - {name: "FLOHOM 1", id: "146908", batna: 275.00}
       - {name: "FLOHOM 2", id: "146944", batna: 225.00}
@@ -127,15 +128,16 @@ properties:
       - {name: "FLOHOM 10", id: "404358", batna: 250.00}
       - {name: "FLOHOM 11", id: "427313", batna: 125.00}
       - {name: "FLOHOM 12", id: "422608", batna: 250.00}
+      - {name: "FLOHOM 13", id: "485833", batna: 315.00}
       - {name: "FLOHOM 14", id: "407612", batna: 150.00}
     rate_group_mapping:
-      rate_1: ["146946"]
-      rate_2: ["376368"]
-      rate_3: ["278502", "383097", "404358", "407612", "422608", "427313"]
-      rate_4: ["146944"]
-      rate_5: ["366176", "345316"]
-      rate_6: ["260001"]
-      rate_7: ["146908"]
+      rate_1: ["146946"] # FLOHOM 3 (lowest)
+      rate_2: ["376368"] # FLOHOM 8
+      rate_3: ["278502", "383097", "404358", "407612", "422608", "427313", "485833"] # FLOHOM 5, FLOHOM 9, FLOHOM 10, FLOHOM 14, FLOHOM 12, FLOHOM 11, FLOHOM 13 (randomly assigned, review this!)
+      rate_4: ["146944"] # FLOHOM 2
+      rate_5: ["366176", "345316"] # FLOHOM 7, FLOHOM 6 (equal)
+      rate_6: ["260001"] # FLOHOM 4
+      rate_7: ["146908"] # FLOHOM 1 (highest)
 
   melrose1:
     name: "Hotel Melrose"
