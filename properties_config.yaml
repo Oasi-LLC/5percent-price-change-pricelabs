@@ -153,22 +153,22 @@ properties:
       rate_2: ["257940___537043", "257940___575558"]
       rate_3: ["257940___537037"]
 
-  azulik1:
-    name: "Azulik"
-    pms: cloudbeds
-    total_units: 48
-    listings:
-      - {name: "AZULIK Jungle Villa", id: "283597___530612", units: 8, batna: 4638.00}
-      - {name: "AZULIK Mayan Villa", id: "283597___530715", units: 12, batna: 5565.00}
-      - {name: "AZULIK Aztec Villa", id: "283597___530718", units: 4, batna: 6122.00}
-      - {name: "AZULIK Sea Villa", id: "283597___530720", units: 11, batna: 7420.00}
-      - {name: "AZULIK Sky Villa", id: "283597___530761", units: 11, batna: 9275.00}
-      - {name: "AZULIK Moon Villa", id: "283597___530766", units: 1, batna: 51940.00}
-      - {name: "AZULIK Aqua Villa", id: "283597___530767", units: 1, batna: 40810.00}
-    rate_group_mapping:
-      rate_1: ["283597___530612", "283597___530718"]
-      rate_2: ["283597___530715", "283597___530720", "283597___530761"]
-      rate_3: ["283597___530766", "283597___530767"]
+  # azulik1:
+  #   name: "Azulik"
+  #   pms: cloudbeds
+  #   total_units: 48
+  #   listings:
+  #     - {name: "AZULIK Jungle Villa", id: "283597___530612", units: 8, batna: 4638.00}
+  #     - {name: "AZULIK Mayan Villa", id: "283597___530715", units: 12, batna: 5565.00}
+  #     - {name: "AZULIK Aztec Villa", id: "283597___530718", units: 4, batna: 6122.00}
+  #     - {name: "AZULIK Sea Villa", id: "283597___530720", units: 11, batna: 7420.00}
+  #     - {name: "AZULIK Sky Villa", id: "283597___530761", units: 11, batna: 9275.00}
+  #     - {name: "AZULIK Moon Villa", id: "283597___530766", units: 1, batna: 51940.00}
+  #     - {name: "AZULIK Aqua Villa", id: "283597___530767", units: 1, batna: 40810.00}
+  #   rate_group_mapping:
+  #     rate_1: ["283597___530612", "283597___530718"]
+  #     rate_2: ["283597___530715", "283597___530720", "283597___530761"]
+  #     rate_3: ["283597___530766", "283597___530767"]
 
   mayamod1:
     name: "Maya & Mod"
