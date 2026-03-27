@@ -170,6 +170,43 @@ properties:
   #     rate_2: ["283597___530715", "283597___530720", "283597___530761"]
   #     rate_3: ["283597___530766", "283597___530767"]
 
+  lafavezion:
+    name: "Lafave Zion"
+    pms: resnexus
+    listings:
+      - {name: "LaFave: Luxury Rentals at Zion--(3BR/2BA) Johnson Mountain Villa", id: "4140___8114"}
+      - {name: "LaFave: Luxury Rentals at Zion--(6BR/4BA) The Gallery House", id: "4140___8115"}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) Temple of Sinawava", id: "4140___8117"}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) The Sentinel", id: "4140___8118"}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) The Sundial", id: "4140___8119"}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite SMALL (1BR/1BA) The Watchman", id: "4140___8120"}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite SMALL (1BR/1BA) The Zion", id: "4140___8121"}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Emerald Pools", id: "4140___8122"}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) The Subway", id: "4140___8123"}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Meridian Tower", id: "4140___8124"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Checkerboard Mesa", id: "4140___8125"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Echo Canyon", id: "4140___8126"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Mountain of the Sun", id: "4140___8127"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Mystery Falls", id: "4140___8128"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Big Springs", id: "4140___8129"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) East Temple", id: "4140___8130"}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Lava Point", id: "4140___8131"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Phantom Valley", id: "4140___8132"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Pine Creek", id: "4140___8133"}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Hidden Canyon", id: "4140___8134"}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Kolob Arch", id: "4140___8135"}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Northgate Peaks", id: "4140___8136"}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Orderville Canyon", id: "4140___8137"}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Kayenta", id: "4140___8138"}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Mount Kinesava", id: "4140___8139"}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Weeping Rock", id: "4140___8140"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Angels Landing", id: "4140___8141"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) The Narrows", id: "4140___8142"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Cathedral Mountain", id: "4140___8143"}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Virgin River", id: "4140___8144"}
+    rate_group_mapping:
+      rate_1: ["4140___8114", "4140___8115", "4140___8117", "4140___8118", "4140___8119", "4140___8120", "4140___8121", "4140___8122", "4140___8123", "4140___8124", "4140___8125", "4140___8126", "4140___8127", "4140___8128", "4140___8129", "4140___8130", "4140___8131", "4140___8132", "4140___8133", "4140___8134", "4140___8135", "4140___8136", "4140___8137", "4140___8138", "4140___8139", "4140___8140", "4140___8141", "4140___8142", "4140___8143", "4140___8144"]
+
   mayamod1:
     name: "Maya & Mod"
     pms: guesty
