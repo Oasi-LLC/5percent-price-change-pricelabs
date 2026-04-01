@@ -60,23 +60,6 @@ properties:
       rate_3: ["316005___633310", "316005___633311"]
       rate_4: ["316005___633312"]
 
-  # pblu1:
-  #   name: "ParcBlu"
-  #   pms: hostaway
-  #   listings:
-  #     - {name: "Love", id: "299754", batna: 120.00}
-  #     - {name: "Peace", id: "299755", batna: 120.00}
-  #     - {name: "Joy", id: "299756", batna: 120.00}
-  #     - {name: "Delight", id: "299757", batna: 140.00}
-  #     - {name: "Grace", id: "299758", batna: 140.00}
-  #     - {name: "Dream", id: "299759", batna: 120.00}
-  #     - {name: "Beauty", id: "299760", batna: 140.00}
-  #     - {name: "Unit #15 - Livin' the Dream -- Cozy Camper Retreat for Two", id: "465407", batna: 100.00}
-  #     - {name: "Unit #11 - Favored -- Private Glass Cabin with Covered Porch and Hot Tub", id: "465408", batna: 200.00}
-  #   rate_group_mapping:
-  #     rate_1: ["299757", "299758", "299760"]
-  #     rate_2: ["299754", "299755", "299756", "299759", "465407", "465408"]
-
   atx1:
     name: "Austin"
     pms: hostaway
@@ -138,37 +121,6 @@ properties:
       rate_5: ["366176", "345316"] # FLOHOM 7, FLOHOM 6 (equal)
       rate_6: ["260001"] # FLOHOM 4
       rate_7: ["146908"] # FLOHOM 1 (highest)
-
-  melrose1:
-    name: "Hotel Melrose"
-    pms: cloudbeds
-    listings:
-      - {name: "Kannah Creek Suites (Single King)", id: "257940___534397", units: 3, batna: 150.00}
-      - {name: "Ponsford Suite (Deluxe King)", id: "257940___537039", units: 7, batna: 165.00}
-      - {name: "Cattlemans Twofold (Deluxe Double Queen)", id: "257940___537043", units: 3, batna: 165.00}
-      - {name: "The London Double (Double Queen)", id: "257940___575558", units: 1, batna: 165.00}
-      - {name: "1884 Quarters (Single Queen)", id: "257940___537037", units: 2, batna: 150.00}
-    rate_group_mapping:
-      rate_1: ["257940___534397", "257940___537039"]
-      rate_2: ["257940___537043", "257940___575558"]
-      rate_3: ["257940___537037"]
-
-  # azulik1:
-  #   name: "Azulik"
-  #   pms: cloudbeds
-  #   total_units: 48
-  #   listings:
-  #     - {name: "AZULIK Jungle Villa", id: "283597___530612", units: 8, batna: 4638.00}
-  #     - {name: "AZULIK Mayan Villa", id: "283597___530715", units: 12, batna: 5565.00}
-  #     - {name: "AZULIK Aztec Villa", id: "283597___530718", units: 4, batna: 6122.00}
-  #     - {name: "AZULIK Sea Villa", id: "283597___530720", units: 11, batna: 7420.00}
-  #     - {name: "AZULIK Sky Villa", id: "283597___530761", units: 11, batna: 9275.00}
-  #     - {name: "AZULIK Moon Villa", id: "283597___530766", units: 1, batna: 51940.00}
-  #     - {name: "AZULIK Aqua Villa", id: "283597___530767", units: 1, batna: 40810.00}
-  #   rate_group_mapping:
-  #     rate_1: ["283597___530612", "283597___530718"]
-  #     rate_2: ["283597___530715", "283597___530720", "283597___530761"]
-  #     rate_3: ["283597___530766", "283597___530767"]
 
   lafavezion:
     name: "Lafave Zion"
