@@ -33,6 +33,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def _st_rerun() -> None:
+    """Compat: st.rerun() exists in Streamlit >=1.27; older versions use experimental_rerun."""
+    rerun = getattr(st, "rerun", None)
+    if callable(rerun):
+        rerun()
+    else:
+        st.experimental_rerun()
+
+
 class PriceLabsAPI:
     def __init__(self):
         self.api_key = API_KEY
@@ -158,6 +168,17 @@ def _sort_listings_by_property(listings: List[Dict], config: Dict) -> List[Dict]
             (L.get("name") or ""),
         ),
     )
+
+
+def _exclude_listings_not_in_config(listings: List[Dict], prop_config: Dict) -> Tuple[List[Dict], int]:
+    """Keep only listings whose id appears under a property in properties_config.yaml. Returns (kept, excluded_count)."""
+    kept: List[Dict] = []
+    for L in listings:
+        prop_key, _ = _listing_to_property(str(L.get("id")), prop_config)
+        if prop_key != "zz_Other":
+            kept.append(L)
+    return kept, len(listings) - len(kept)
+
 
 def _extract_parent_listing_id(listing: Dict) -> Optional[str]:
     """Best-effort parent ID extraction from API listing payload."""
@@ -364,7 +385,7 @@ if APP_PASSWORD and not st.session_state["authenticated"]:
             st.error("Incorrect password.")
         else:
             st.session_state["authenticated"] = True
-            st.rerun()
+            _st_rerun()
     st.stop()
 
 st.title("PriceLabs Price Adjustment Tool")
@@ -374,7 +395,7 @@ if APP_PASSWORD:
     with st.sidebar:
         if st.button("Log out"):
             st.session_state["authenticated"] = False
-            st.rerun()
+            _st_rerun()
 
 # Initialize session state
 if 'listings' not in st.session_state:
@@ -387,23 +408,37 @@ if 'last_increase' not in st.session_state:
 # Refresh listings button
 if st.button('Refresh Listings from PriceLabs'):
     with st.spinner('Fetching latest listings...'):
-        st.session_state['listings'] = fetch_listings()
-        total_listings = len(st.session_state['listings'])
-        st.success(f"Fetched {total_listings} active listings.")
-        
+        raw_listings = fetch_listings()
+        prop_cfg = _load_property_config()
+        configured_listings, n_excluded_other = _exclude_listings_not_in_config(raw_listings, prop_cfg)
+        st.session_state['listings'] = configured_listings
+        total_shown = len(configured_listings)
+        total_api = len(raw_listings)
+        st.success(
+            f"Fetched {total_api} active listings from PriceLabs. "
+            f"Showing {total_shown} that match properties_config.yaml."
+            + (f" Excluded {n_excluded_other} not in config (child/uncatalogued listings are hidden; update parents only)." if n_excluded_other else "")
+        )
+
         # Show summary stats
-        if total_listings > 0:
+        if total_shown > 0:
             st.subheader("📊 Listings Summary")
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("Total Active Listings", total_listings)
+                st.metric("In config (shown)", total_shown)
             with col2:
-                st.metric("Ready for Adjustment", total_listings)
+                st.metric("Excluded (not in YAML)", n_excluded_other)
 
 listings = st.session_state['listings']
+# Drop listings not in properties_config.yaml so "Other" never appears and cannot be adjusted.
+prop_config = _load_property_config()
+if listings:
+    filtered_listings, _ = _exclude_listings_not_in_config(listings, prop_config)
+    if len(filtered_listings) != len(listings):
+        st.session_state['listings'] = filtered_listings
+    listings = st.session_state['listings']
 
 if listings:
-    prop_config = _load_property_config()
     sorted_listings = _sort_listings_by_property(listings, prop_config)
 
     # Initialize checkbox state for all listings (default True) so we only use session state, not value=
@@ -427,12 +462,12 @@ if listings:
             if st.button("Select all", key="select_all_listings"):
                 for L in sorted_listings:
                     st.session_state["cb_" + str(L["id"])] = True
-                st.rerun()
+                _st_rerun()
         with col_desel:
             if st.button("Deselect all", key="deselect_all_listings"):
                 for L in sorted_listings:
                     st.session_state["cb_" + str(L["id"])] = False
-                st.rerun()
+                _st_rerun()
 
         def _property_display_name(L: Dict) -> str:
             return _listing_to_property(L.get("id"), prop_config)[1]
@@ -538,6 +573,6 @@ if listings:
                     st.warning(f"Retry complete: {retried_ok} succeeded, {len(still_failed)} still failed.")
                 else:
                     st.success(f"All {len(retry_results)} listings updated successfully.")
-                st.rerun()
+                _st_rerun()
 else:
     st.info('Click "Refresh Listings from PriceLabs" to begin.') 
