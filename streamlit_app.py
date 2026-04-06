@@ -5,7 +5,7 @@ import requests
 import yaml
 import pandas as pd
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Set
 from datetime import datetime, timedelta
 from itertools import groupby
 import logging
@@ -159,6 +159,59 @@ def _sort_listings_by_property(listings: List[Dict], config: Dict) -> List[Dict]
         ),
     )
 
+def _extract_parent_listing_id(listing: Dict) -> Optional[str]:
+    """Best-effort parent ID extraction from API listing payload."""
+    direct_keys = (
+        "parent_listing_id",
+        "parentListingId",
+        "parent_id",
+        "parentId",
+        "parent",
+    )
+    for key in direct_keys:
+        value = listing.get(key)
+        if value:
+            if isinstance(value, dict):
+                nested_id = value.get("id")
+                if nested_id:
+                    return str(nested_id)
+            else:
+                return str(value)
+    return None
+
+
+def _split_children_of_selected_update_children_parents(listings: List[Dict], prop_config: Dict) -> Tuple[List[Dict], List[Dict]]:
+    """
+    Keep selected listings except children whose selected parent will already propagate changes.
+    Returns (to_process, auto_skipped_children).
+    """
+    configured_listing_ids: Set[str] = set()
+    selected_update_children_parent_ids: Set[str] = set()
+
+    for L in listings:
+        lid = str(L.get("id"))
+        prop_key = _listing_to_property(lid, prop_config)[0]
+        if prop_key == "zz_Other":
+            continue
+        configured_listing_ids.add(lid)
+        prop_data = prop_config.get(prop_key) if isinstance(prop_config.get(prop_key), dict) else {}
+        if prop_data.get("update_children", False):
+            selected_update_children_parent_ids.add(lid)
+
+    to_process: List[Dict] = []
+    auto_skipped_children: List[Dict] = []
+    for L in listings:
+        lid = str(L.get("id"))
+        # Only auto-skip unknown "Other" listings that reference a selected update_children parent.
+        if lid not in configured_listing_ids:
+            parent_id = _extract_parent_listing_id(L)
+            if parent_id and parent_id in selected_update_children_parent_ids:
+                auto_skipped_children.append(L)
+                continue
+        to_process.append(L)
+
+    return to_process, auto_skipped_children
+
 
 # --- Helper functions ---
 def fetch_listings():
@@ -175,6 +228,19 @@ def batch_update(listings, increase, batch_size=10, delay=2, per_listing_delay=2
     batch_size=10 keeps request bursts smaller; per_listing_delay=2 ~1 req/sec per listing. Increase delay if you see 429s."""
     prop_config = _load_property_config()
     results = []
+    listings, auto_skipped_children = _split_children_of_selected_update_children_parents(listings, prop_config)
+    for child in auto_skipped_children:
+        parent_id = _extract_parent_listing_id(child)
+        msg = "Auto-skipped child listing: selected parent has update_children=true"
+        if parent_id:
+            msg += f" (parent_id={parent_id})"
+        results.append({
+            'id': child['id'],
+            'name': child.get('name', str(child.get('id'))),
+            'status': 'skipped',
+            'message': msg
+        })
+
     total = len(listings)
     for i in range(0, total, batch_size):
         batch = listings[i:i+batch_size]
