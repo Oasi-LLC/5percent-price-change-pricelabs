@@ -75,6 +75,7 @@ properties:
   sos1:
     name: "Spirit of Sofia"
     pms: guesty
+    update_children: true
     total_units: 3
     listings:
       - {name: "12BR/Sleeps 30! Designer Poolside Adventure Dwtn!", id: "68642480da9649000fc63fc5", units: 1, batna: 750.00}
@@ -162,6 +163,7 @@ properties:
   mayamod1:
     name: "Maya & Mod"
     pms: guesty
+    update_children: true
     listings:
       - {name: "Maya -- Maya Hotel Retreat", id: "6901008185d27c0022d3ba14", batna: 549.00}
       - {name: "Mod -- The Mod Hotel", id: "6901037df868fc002a10e0d7", batna: 449.00}
