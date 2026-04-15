@@ -114,6 +114,7 @@ properties:
       - {name: "FLOHOM 12", id: "422608", batna: 250.00}
       - {name: "FLOHOM 13", id: "485833", batna: 315.00}
       - {name: "FLOHOM 14", id: "407612", batna: 150.00}
+      - {name: "FLOHOM 15 -- FLOHOM 15 | Grande Dunes, Myrtle Beach", id: "467334", batna: 275.00}
     rate_group_mapping:
       rate_1: ["146946"] # FLOHOM 3 (lowest)
       rate_2: ["376368"] # FLOHOM 8
@@ -121,7 +122,7 @@ properties:
       rate_4: ["146944"] # FLOHOM 2
       rate_5: ["366176", "345316"] # FLOHOM 7, FLOHOM 6 (equal)
       rate_6: ["260001"] # FLOHOM 4
-      rate_7: ["146908"] # FLOHOM 1 (highest)
+      rate_7: ["146908", "467334"] # FLOHOM 1 (highest), FLOHOM 15
 
   lafavezion:
     name: "Lafave Zion"
