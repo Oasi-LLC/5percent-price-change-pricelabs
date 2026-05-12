@@ -121,14 +121,14 @@ def calculate_adjusted_price(price: float, increase: bool = True) -> float:
 
 
 def _is_date_in_valid_range(date_str: str) -> bool:
-    """PriceLabs API: date must be in future and less than 1 year from today."""
+    """PriceLabs API: date must be today or in the future and not more than 1 year from today."""
     try:
         d = datetime.strptime(date_str, "%Y-%m-%d").date()
     except (ValueError, TypeError):
         return False
     today = datetime.now().date()
     one_year_later = today + timedelta(days=365)
-    return today < d <= one_year_later
+    return today <= d <= one_year_later
 
 # --- Property config (for grouping/sorting) ---
 def _load_property_config() -> Dict:
@@ -312,7 +312,7 @@ def batch_update(listings, increase, batch_size=10, delay=2, per_listing_delay=2
                         )
                     num_skipped = skipped_not_fixed + skipped_date_range + skipped_bad_price
                     if num_qualifying == 0:
-                        msg = 'No overrides in valid range (fixed, future, ≤1 year) to update'
+                        msg = 'No overrides in valid range (fixed, today or future, ≤1 year) to update'
                         if all_pulled:
                             msg += f'. Pulled {len(all_pulled)} total (skipped: {skipped_not_fixed} non-fixed, {skipped_date_range} out of date range, {skipped_bad_price} bad price)'
                         results.append({
