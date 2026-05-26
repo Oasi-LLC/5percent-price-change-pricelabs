@@ -1,6 +1,6 @@
 # PriceLabs 5% Price Adjustment Tool
 
-Streamlit app to apply ±5% fixed-override adjustments across configured listings, with **BATNA minimum floors** (flat, seasonal, or weekday/weekend).
+Streamlit app to apply ±5% fixed-override adjustments across configured listings, with **BATNA minimum floors** (flat or weekday/weekend for SOS and Maya & Mod).
 
 ## Setup
 
@@ -32,7 +32,7 @@ streamlit run streamlit_app.py
 
 ## Configuration
 
-- `properties_config.yaml` — listing IDs, BATNA values, rate groups, Lafave seasons, SOS/Maya weekday-weekend floors.
+- `properties_config.yaml` — listing IDs, BATNA values, rate groups, SOS/Maya weekday-weekend floors.
 
 ## Project layout
 

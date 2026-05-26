@@ -18,14 +18,6 @@ def get_listing_config_entry(
     return None, None
 
 
-def season_for_month(month: int, batna_season_months: Dict) -> Optional[str]:
-    """Map calendar month (1-12) to season key using property batna_season_months."""
-    for season, months in batna_season_months.items():
-        if month in months:
-            return season
-    return None
-
-
 def is_weekend_day(weekday: int) -> bool:
     """True for Friday/Saturday (weekday: Mon=0 .. Sun=6). Sun-Thu use weekday BATNA."""
     return weekday in (4, 5)
@@ -33,19 +25,6 @@ def is_weekend_day(weekday: int) -> bool:
 
 def batna_floor_from_entry_for_date(entry: Dict, date_str: str, prop_data: Optional[Dict]) -> Optional[float]:
     """Resolve BATNA floor from a listing config entry and override date."""
-    batna_by_season = entry.get("batna_by_season")
-    if batna_by_season and prop_data:
-        season_months = prop_data.get("batna_season_months") or {}
-        try:
-            month = datetime.strptime(date_str, "%Y-%m-%d").month
-        except (ValueError, TypeError):
-            return None
-        season = season_for_month(month, season_months)
-        if season is None:
-            return None
-        value = batna_by_season.get(season)
-        return float(value) if value is not None else None
-
     weekday_batna = entry.get("batna_weekday")
     weekend_batna = entry.get("batna_weekend")
     if weekday_batna is not None and weekend_batna is not None:
@@ -67,8 +46,7 @@ def batna_floor_for_date(
 ) -> Optional[float]:
     """
     Resolve BATNA floor for one override date.
-    Lafave: batna_by_season + batna_season_months.
-    SOS: batna_weekday (Sun-Thu) / batna_weekend (Fri-Sat).
+    SOS/Maya: batna_weekday (Sun-Thu) / batna_weekend (Fri-Sat).
     Others: flat batna.
     """
     entry, prop_data = get_listing_config_entry(listing_id, prop_config)

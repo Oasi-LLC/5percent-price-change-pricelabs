@@ -5,7 +5,6 @@ from pricelabs_tool.batna import (
     apply_adjustment_with_batna,
     batna_floor_for_date,
     is_weekend_day,
-    season_for_month,
 )
 
 
@@ -14,18 +13,6 @@ def _load_prop_config():
     with open(path) as f:
         data = yaml.safe_load(f) or {}
     return data.get("properties", data)
-
-
-def test_season_for_month_lafave():
-    months = {
-        "low": [1, 2, 12],
-        "shoulder": [3, 7, 8, 11],
-        "high": [4, 5, 6, 9, 10],
-    }
-    assert season_for_month(4, months) == "high"
-    assert season_for_month(8, months) == "shoulder"
-    assert season_for_month(12, months) == "low"
-    assert season_for_month(6, months) == "high"
 
 
 def test_flat_batna_decrease_clamp():
@@ -67,20 +54,9 @@ def test_batna_floor_for_date_onera():
     assert floor == 189.0
 
 
-def test_batna_floor_for_date_lafave_seasonal():
+def test_batna_floor_for_date_lafave_no_batna():
     config = _load_prop_config()
-    suite_big = "4140___8117"
-    assert batna_floor_for_date(suite_big, "2026-04-01", config) == 557.0
-    assert batna_floor_for_date(suite_big, "2026-08-01", config) == 445.0
-    assert batna_floor_for_date(suite_big, "2026-12-01", config) == 234.0
-
-
-def test_lafave_seasonal_clamp_on_decrease():
-    config = _load_prop_config()
-    floor = batna_floor_for_date("4140___8117", "2026-04-01", config)
-    final, clamped = apply_adjustment_with_batna(580, increase=False, batna_floor=floor)
-    assert final == 557
-    assert clamped is True
+    assert batna_floor_for_date("4140___8117", "2026-04-01", config) is None
 
 
 def test_is_weekend_day():
