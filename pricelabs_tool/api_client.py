@@ -4,17 +4,19 @@ from typing import List, Dict, Optional
 from datetime import datetime
 import logging
 from dotenv import load_dotenv
-from pricelabs_tool.config import API_KEY, BASE_URL
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+
 class PriceLabsAPI:
     def __init__(self):
-        self.api_key = API_KEY
+        self.api_key = os.getenv("PRICELABS_API_KEY")
         if not self.api_key:
             raise ValueError("PRICELABS_API_KEY environment variable is required")
-        
-        self.base_url = BASE_URL
+
+        self.base_url = os.getenv("API_BASE_URL", "https://api.pricelabs.co/v1")
         self.session = requests.Session()
         self.session.headers.update({
             'X-API-Key': self.api_key,

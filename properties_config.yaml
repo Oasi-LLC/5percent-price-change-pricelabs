@@ -19,17 +19,18 @@ properties:
       - {name: "Juniper Haus", id: "203812___490024", batna: 169.00}
       - {name: "Pecan Haus", id: "203812___528745", batna: 169.00}
       - {name: "Bluebonnet", id: "203812___634080", batna: 189.00}
+      # Original fb2 listings
       - {name: "Great Lodge", id: "203812___643757", units: 1, batna: 1352}
       - {name: "Great Lodge: King Room", id: "203812___643775", units: 6, batna: 169.00}
       - {name: "Great Lodge: King Room (Accessible)", id: "203812___657152", units: 2, batna: 169.00}
       - {name: "Cypress Lodge | Sleeps 2", id: "203812___655826", units: 2, batna: 169.00}
-      - {name: "Cypress Lodge | Sleeps 4", id: "203812___643762", units: 2, batna: 229.00}
-      - {name: "Cypress Lodge | Sleeps 6", id: "203812___655827", units: 2, batna: 229.00}
+      - {name: "Cypress Lodge | Sleeps 4", id: "203812___643762", units: 2, batna: 289.00}
+      - {name: "Cypress Lodge | Sleeps 6", id: "203812___655827", units: 2, batna: 394.00}
       - {name: "Diamond", id: "203812___643771", units: 3, batna: 229.00}
       - {name: "Monolith", id: "203812___643773", units: 2, batna: 229.00}
       - {name: "Post Oak", id: "203812___643760", units: 1, batna: 169.00}
       - {name: "Quonset", id: "203812___643764", units: 2, batna: 209.00}
-      - {name: "Spiral", id: "203812___643772", units: 1, batna: 229.00}
+      - {name: "Spiral", id: "203812___643772", units: 1, batna: 209.00}
       - {name: "Winecup", id: "203812___643766", units: 2, batna: 209.00}
     rate_group_mapping:
       rate_1: ["203812___364781", "203812___364776", "203812___364778", "203812___364773"]
@@ -64,23 +65,23 @@ properties:
     name: "Austin"
     pms: hostaway
     listings:
-      - {name: "Romney", id: "320201", batna: 139.00}
-      - {name: "Sunstrip", id: "320203", batna: 169.00}
-      - {name: "Malvern", id: "389561", batna: 159.00}
+      - {name: "Sunstrip", id: "320203", batna: 179.00}
+      - {name: "Malvern", id: "389561", batna: 600.00}
+      - {name: "Malvern (Loft Only) ", id: "511788", batna: 159.00}
     rate_group_mapping:
-      rate_4: ["320203"]
-      rate_2: ["389561"]
-      rate_1: ["320201"]
+      rate_4: ["320203"] # Sunstrip
+      rate_2: ["389561"] # Malvern
+      rate_1: ["511788"] # MLVRN Loft Only
 
   sos1:
     name: "Spirit of Sofia"
     pms: guesty
     update_children: true
-    total_units: 3
+    total_units: 3 # Sum of units below
     listings:
-      - {name: "12BR/Sleeps 30! Designer Poolside Adventure Dwtn!", id: "68642480da9649000fc63fc5", units: 1, batna: 750.00}
-      - {name: "11BR Designer Villa! Poolside Dntwn PS! Sleeps 30", id: "686424c7c8d43b001321df29", units: 1, batna: 650.00}
-      - {name: "23BR Designer Concept Buyout! True PS Experience!", id: "686424d94cdb20000e10b8db", units: 1, batna: 1500.00}
+      - {name: "12BR/Sleeps 30! Designer Poolside Adventure Dwtn!", id: "68642480da9649000fc63fc5", units: 1, batna: 750.00, batna_weekday: 750.00, batna_weekend: 1000.00}
+      - {name: "11BR Designer Villa! Poolside Dntwn PS! Sleeps 30", id: "686424c7c8d43b001321df29", units: 1, batna: 650.00, batna_weekday: 650.00, batna_weekend: 900.00}
+      - {name: "23BR Designer Concept Buyout! True PS Experience!", id: "686424d94cdb20000e10b8db", units: 1, batna: 1500.00, batna_weekday: 1500.00, batna_weekend: 2000.00}
     rate_group_mapping:
       rate_1: ["686424d94cdb20000e10b8db"]
       rate_2: ["686424c7c8d43b001321df29", "68642480da9649000fc63fc5"]
@@ -114,8 +115,8 @@ properties:
       - {name: "FLOHOM 12", id: "422608", batna: 250.00}
       - {name: "FLOHOM 13", id: "485833", batna: 315.00}
       - {name: "FLOHOM 14", id: "407612", batna: 150.00}
-      - {name: "FLOHOM 15 -- FLOHOM 15 | Grande Dunes, Myrtle Beach", id: "467334", batna: 275.00}
-      - {name: "FLOHOM 16 | Liberty Landing Marina", id: "510832", batna: 300.00}
+      - {name: "FLOHOM 15", id: "467334", batna: 275.00}
+      - {name: "FLOHOM 16", id: "510832", batna: 300.00}
       - {name: "Flohom 17", id: "514132", batna: 300.00}
     rate_group_mapping:
       rate_1: ["146946"] # FLOHOM 3 (lowest)
@@ -129,37 +130,42 @@ properties:
   lafavezion:
     name: "Lafave Zion"
     pms: resnexus
+    # BATNA = weekly avg ADR per room tier; floor chosen by override date month
+    batna_season_months:
+      low: [1, 2, 12]              # Jan, Feb, Dec
+      shoulder: [3, 7, 8, 11]      # Mar, Jul, Aug, Nov
+      high: [4, 5, 6, 9, 10]       # Apr, May, Jun, Sep, Oct
     listings:
-      - {name: "LaFave: Luxury Rentals at Zion--(3BR/2BA) Johnson Mountain Villa", id: "4140___8114"}
-      - {name: "LaFave: Luxury Rentals at Zion--(6BR/4BA) The Gallery House", id: "4140___8115"}
-      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) Temple of Sinawava", id: "4140___8117"}
-      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) The Sentinel", id: "4140___8118"}
-      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) The Sundial", id: "4140___8119"}
-      - {name: "LaFave: Luxury Rentals at Zion--Suite SMALL (1BR/1BA) The Watchman", id: "4140___8120"}
-      - {name: "LaFave: Luxury Rentals at Zion--Suite SMALL (1BR/1BA) The Zion", id: "4140___8121"}
-      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Emerald Pools", id: "4140___8122"}
-      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) The Subway", id: "4140___8123"}
-      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Meridian Tower", id: "4140___8124"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Checkerboard Mesa", id: "4140___8125"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Echo Canyon", id: "4140___8126"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Mountain of the Sun", id: "4140___8127"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Mystery Falls", id: "4140___8128"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Big Springs", id: "4140___8129"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) East Temple", id: "4140___8130"}
-      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Lava Point", id: "4140___8131"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Phantom Valley", id: "4140___8132"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Pine Creek", id: "4140___8133"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Hidden Canyon", id: "4140___8134"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Kolob Arch", id: "4140___8135"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Northgate Peaks", id: "4140___8136"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Orderville Canyon", id: "4140___8137"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Kayenta", id: "4140___8138"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Mount Kinesava", id: "4140___8139"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Weeping Rock", id: "4140___8140"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Angels Landing", id: "4140___8141"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) The Narrows", id: "4140___8142"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Cathedral Mountain", id: "4140___8143"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Virgin River", id: "4140___8144"}
+      - {name: "LaFave: Luxury Rentals at Zion--(3BR/2BA) Johnson Mountain Villa", id: "4140___8114", batna_by_season: {low: 502.00, shoulder: 921.00, high: 1072.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--(6BR/4BA) The Gallery House", id: "4140___8115", batna_by_season: {low: 880.00, shoulder: 1409.00, high: 1574.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) Temple of Sinawava", id: "4140___8117", batna_by_season: {low: 234.00, shoulder: 445.00, high: 557.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) The Sentinel", id: "4140___8118", batna_by_season: {low: 234.00, shoulder: 445.00, high: 557.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) The Sundial", id: "4140___8119", batna_by_season: {low: 234.00, shoulder: 445.00, high: 557.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite SMALL (1BR/1BA) The Watchman", id: "4140___8120", batna_by_season: {low: 196.00, shoulder: 389.00, high: 471.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite SMALL (1BR/1BA) The Zion", id: "4140___8121", batna_by_season: {low: 196.00, shoulder: 389.00, high: 471.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Emerald Pools", id: "4140___8122", batna_by_season: {low: 423.00, shoulder: 713.00, high: 844.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) The Subway", id: "4140___8123", batna_by_season: {low: 423.00, shoulder: 713.00, high: 844.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Meridian Tower", id: "4140___8124", batna_by_season: {low: 423.00, shoulder: 713.00, high: 844.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Checkerboard Mesa", id: "4140___8125", batna_by_season: {low: 351.00, shoulder: 788.00, high: 938.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Echo Canyon", id: "4140___8126", batna_by_season: {low: 351.00, shoulder: 788.00, high: 938.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Mountain of the Sun", id: "4140___8127", batna_by_season: {low: 351.00, shoulder: 788.00, high: 938.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Mystery Falls", id: "4140___8128", batna_by_season: {low: 351.00, shoulder: 788.00, high: 938.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Big Springs", id: "4140___8129", batna_by_season: {low: 351.00, shoulder: 788.00, high: 938.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) East Temple", id: "4140___8130", batna_by_season: {low: 351.00, shoulder: 788.00, high: 938.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Lava Point", id: "4140___8131", batna_by_season: {low: 423.00, shoulder: 713.00, high: 844.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Phantom Valley", id: "4140___8132", batna_by_season: {low: 351.00, shoulder: 788.00, high: 938.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Pine Creek", id: "4140___8133", batna_by_season: {low: 351.00, shoulder: 788.00, high: 938.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Hidden Canyon", id: "4140___8134", batna_by_season: {low: 295.00, shoulder: 520.00, high: 639.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Kolob Arch", id: "4140___8135", batna_by_season: {low: 295.00, shoulder: 520.00, high: 639.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Northgate Peaks", id: "4140___8136", batna_by_season: {low: 295.00, shoulder: 520.00, high: 639.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Orderville Canyon", id: "4140___8137", batna_by_season: {low: 295.00, shoulder: 520.00, high: 639.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Kayenta", id: "4140___8138", batna_by_season: {low: 295.00, shoulder: 520.00, high: 639.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Mount Kinesava", id: "4140___8139", batna_by_season: {low: 295.00, shoulder: 520.00, high: 639.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Weeping Rock", id: "4140___8140", batna_by_season: {low: 295.00, shoulder: 520.00, high: 639.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Angels Landing", id: "4140___8141", batna_by_season: {low: 521.00, shoulder: 959.00, high: 1123.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) The Narrows", id: "4140___8142", batna_by_season: {low: 521.00, shoulder: 959.00, high: 1123.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Cathedral Mountain", id: "4140___8143", batna_by_season: {low: 521.00, shoulder: 959.00, high: 1123.00}}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Virgin River", id: "4140___8144", batna_by_season: {low: 521.00, shoulder: 959.00, high: 1123.00}}
     rate_group_mapping:
       rate_1: ["4140___8114", "4140___8115", "4140___8117", "4140___8118", "4140___8119", "4140___8120", "4140___8121", "4140___8122", "4140___8123", "4140___8124", "4140___8125", "4140___8126", "4140___8127", "4140___8128", "4140___8129", "4140___8130", "4140___8131", "4140___8132", "4140___8133", "4140___8134", "4140___8135", "4140___8136", "4140___8137", "4140___8138", "4140___8139", "4140___8140", "4140___8141", "4140___8142", "4140___8143", "4140___8144"]
 
@@ -168,10 +174,10 @@ properties:
     pms: guesty
     update_children: true
     listings:
-      - {name: "Maya -- Maya Hotel Retreat", id: "6901008185d27c0022d3ba14", batna: 549.00}
-      - {name: "Mod -- The Mod Hotel", id: "6901037df868fc002a10e0d7", batna: 449.00}
-      - {name: "M&M -- Maya & Mod Double Buyout", id: "6901051a7cc21d0029679ae6", batna: 976.00}
+      - {name: "Maya -- Maya Hotel Retreat", id: "6901008185d27c0022d3ba14", batna: 549.00, batna_weekday: 549.00, batna_weekend: 800.00}
+      - {name: "Mod -- The Mod Hotel", id: "6901037df868fc002a10e0d7", batna: 449.00, batna_weekday: 449.00, batna_weekend: 700.00}
+      # - {name: "M&M -- Maya & Mod Double Buyout", id: "6901051a7cc21d0029679ae6", batna: 976.00, batna_weekday: 976.00, batna_weekend: 1500.00}
     rate_group_mapping:
-      rate_1: ["6901008185d27c0022d3ba14"]
-      rate_2: ["6901037df868fc002a10e0d7"]
-      rate_3: ["6901051a7cc21d0029679ae6"]
+      rate_1: ["6901008185d27c0022d3ba14"] # Maya
+      rate_2: ["6901037df868fc002a10e0d7"] # Mod
+      # rate_3: ["6901051a7cc21d0029679ae6"] # M&M Double Buyout

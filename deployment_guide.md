@@ -10,12 +10,12 @@ This guide explains how to deploy and run the PriceLabs adjustment tool, both lo
 magic boxes/k_pricelabs5%_new/
 │
 ├── streamlit_app.py                # Main Streamlit app (in project root)
-├── pricelabs_tool/                 # Business logic and helpers
-│   ├── __init__.py
+├── properties_config.yaml          # Listings, BATNA, rate groups
+├── pricelabs_tool/                 # Business logic
 │   ├── api_client.py
-│   ├── price_calculator.py
-│   ├── config.py
-│   └── ... (other helpers, if needed)
+│   ├── batna.py
+│   ├── adjustment.py
+│   └── property_config.py
 ├── requirements.txt                # All dependencies
 ├── .gitignore                      # Should include .env, venv/, etc.
 ├── .env                            # (Not tracked by git) Your secrets and API keys
