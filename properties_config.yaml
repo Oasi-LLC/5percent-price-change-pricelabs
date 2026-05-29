@@ -66,7 +66,7 @@ properties:
     pms: hostaway
     listings:
       - {name: "Sunstrip", id: "320203", batna: 179.00}
-      - {name: "Malvern", id: "389561", batna: 600.00}
+      - {name: "Malvern", id: "389561", batna: 600.00, batna_exempt_ranges: [{start: "2026-06-06", end: "2026-06-19"}, {start: "2026-07-03", end: "2026-07-20"}, {start: "2026-08-02", end: "2026-08-05"}, {start: "2026-10-16", end: "2026-10-26"}]}
       - {name: "Malvern (Loft Only) ", id: "511788", batna: 159.00}
     rate_group_mapping:
       rate_4: ["320203"] # Sunstrip

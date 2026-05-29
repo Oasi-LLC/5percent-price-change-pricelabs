@@ -54,6 +54,28 @@ def test_batna_floor_for_date_onera():
     assert floor == 189.0
 
 
+def test_malvern_batna_exempt_ranges():
+    config = _load_prop_config()
+    malvern = "389561"
+    assert batna_floor_for_date(malvern, "2026-06-10", config) is None
+    assert batna_floor_for_date(malvern, "2026-07-15", config) is None
+    assert batna_floor_for_date(malvern, "2026-08-03", config) is None
+    assert batna_floor_for_date(malvern, "2026-10-20", config) is None
+    assert batna_floor_for_date(malvern, "2026-06-05", config) == 600.0
+    assert batna_floor_for_date(malvern, "2026-06-20", config) == 600.0
+    assert batna_floor_for_date(malvern, "2026-07-02", config) == 600.0
+    assert batna_floor_for_date(malvern, "2026-08-06", config) == 600.0
+
+
+def test_malvern_exempt_date_no_batna_clamp():
+    config = _load_prop_config()
+    final, clamped = apply_adjustment_with_batna(
+        550, increase=False, batna_floor=batna_floor_for_date("389561", "2026-06-10", config)
+    )
+    assert final == 522
+    assert clamped is False
+
+
 def test_batna_floor_for_date_lafave_no_batna():
     config = _load_prop_config()
     assert batna_floor_for_date("4140___8117", "2026-04-01", config) is None

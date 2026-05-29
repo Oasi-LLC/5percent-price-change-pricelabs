@@ -1,7 +1,7 @@
 """BATNA floor resolution and price adjustment with minimum-rate clamping."""
 
-from datetime import datetime
-from typing import Dict, Optional, Tuple
+from datetime import date, datetime
+from typing import Dict, List, Optional, Tuple
 
 
 def get_listing_config_entry(
@@ -23,8 +23,32 @@ def is_weekend_day(weekday: int) -> bool:
     return weekday in (4, 5)
 
 
+def _parse_date(date_str: str) -> Optional[date]:
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
+
+
+def is_date_in_batna_exempt_ranges(date_str: str, exempt_ranges: List[Dict]) -> bool:
+    """True if date falls in any inclusive {start, end} range on the listing."""
+    d = _parse_date(date_str)
+    if d is None:
+        return False
+    for item in exempt_ranges:
+        start = _parse_date(str(item.get("start", "")))
+        end = _parse_date(str(item.get("end", "")))
+        if start is not None and end is not None and start <= d <= end:
+            return True
+    return False
+
+
 def batna_floor_from_entry_for_date(entry: Dict, date_str: str, prop_data: Optional[Dict]) -> Optional[float]:
     """Resolve BATNA floor from a listing config entry and override date."""
+    exempt_ranges = entry.get("batna_exempt_ranges")
+    if exempt_ranges and is_date_in_batna_exempt_ranges(date_str, exempt_ranges):
+        return None
+
     weekday_batna = entry.get("batna_weekday")
     weekend_batna = entry.get("batna_weekend")
     if weekday_batna is not None and weekend_batna is not None:
@@ -46,6 +70,7 @@ def batna_floor_for_date(
 ) -> Optional[float]:
     """
     Resolve BATNA floor for one override date.
+    batna_exempt_ranges: no floor for those dates (5% only).
     SOS/Maya: batna_weekday (Sun-Thu) / batna_weekend (Fri-Sat).
     Others: flat batna.
     """
