@@ -1,4 +1,4 @@
-# Configuration for different property groups and their listings/rate mappings.
+# Configuration for property groups and their listings.
 # Top-level 'properties' key: app uses config.get("properties", data) for compatibility.
 
 properties:
@@ -32,17 +32,6 @@ properties:
       - {name: "Quonset", id: "203812___643764", units: 2, batna: 209.00}
       - {name: "Spiral", id: "203812___643772", units: 1, batna: 209.00}
       - {name: "Winecup", id: "203812___643766", units: 2, batna: 209.00}
-    rate_group_mapping:
-      rate_1: ["203812___364781", "203812___364776", "203812___364778", "203812___364773"]
-      rate_2: ["203812___364780", "203812___362535", "203812___364782", "203812___364779", "203812___634080"]
-      rate_3: ["203812___490007", "203812___490024", "203812___528745"]
-      rate_4: ["203812___643772", "203812___643771"]
-      rate_5: ["203812___643766", "203812___643764"]
-      rate_6: ["203812___643757"]
-      rate_7: ["203812___643775", "203812___657152"]
-      rate_8: ["203812___643773"]
-      rate_9: ["203812___655826", "203812___643762", "203812___655827"]
-      rate_10: ["203812___643760"]
 
   wb1:
     name: "Onera Wimberley"
@@ -55,11 +44,6 @@ properties:
       - {name: "Spyglass ADA", id: "316005___633311", units: 1, batna: 189.00}
       - {name: "Greenhouse Pet", id: "316005___633308", units: 6, batna: 169.00}
       - {name: "Spyglass Pet", id: "316005___633312", units: 6, batna: 189.00}
-    rate_group_mapping:
-      rate_1: ["316005___633306", "316005___633307"]
-      rate_2: ["316005___633308"]
-      rate_3: ["316005___633310", "316005___633311"]
-      rate_4: ["316005___633312"]
 
   atx1:
     name: "Austin"
@@ -68,10 +52,6 @@ properties:
       - {name: "Sunstrip", id: "320203", batna: 179.00}
       - {name: "Malvern", id: "389561", batna: 600.00, batna_exempt_ranges: [{start: "2026-06-06", end: "2026-06-19"}, {start: "2026-07-03", end: "2026-07-20"}, {start: "2026-08-02", end: "2026-08-05"}, {start: "2026-10-16", end: "2026-10-26"}]}
       - {name: "Malvern (Loft Only) ", id: "511788", batna: 159.00}
-    rate_group_mapping:
-      rate_4: ["320203"] # Sunstrip
-      rate_2: ["389561"] # Malvern
-      rate_1: ["511788"] # MLVRN Loft Only
 
   sos1:
     name: "Spirit of Sofia"
@@ -82,9 +62,6 @@ properties:
       - {name: "12BR/Sleeps 30! Designer Poolside Adventure Dwtn!", id: "68642480da9649000fc63fc5", units: 1, batna: 750.00, batna_weekday: 750.00, batna_weekend: 1000.00}
       - {name: "11BR Designer Villa! Poolside Dntwn PS! Sleeps 30", id: "686424c7c8d43b001321df29", units: 1, batna: 650.00, batna_weekday: 650.00, batna_weekend: 900.00}
       - {name: "23BR Designer Concept Buyout! True PS Experience!", id: "686424d94cdb20000e10b8db", units: 1, batna: 1500.00, batna_weekday: 1500.00, batna_weekend: 2000.00}
-    rate_group_mapping:
-      rate_1: ["686424d94cdb20000e10b8db"]
-      rate_2: ["686424c7c8d43b001321df29", "68642480da9649000fc63fc5"]
 
   spm1:
     name: "Spoon Mountain"
@@ -93,8 +70,6 @@ properties:
       - {name: "Chisum", id: "278915", batna: 189.00}
       - {name: "Kingfisher", id: "303587", batna: 189.00}
       - {name: "Shaka", id: "303588", batna: 189.00}
-    rate_group_mapping:
-      rate_1: ["278915", "303587", "303588"]
 
   flo1:
     name: "FLOHOM"
@@ -118,14 +93,6 @@ properties:
       - {name: "FLOHOM 15", id: "467334", batna: 275.00}
       - {name: "FLOHOM 16", id: "510832", batna: 300.00}
       - {name: "Flohom 17", id: "514132", batna: 300.00}
-    rate_group_mapping:
-      rate_1: ["146946"] # FLOHOM 3 (lowest)
-      rate_2: ["376368"] # FLOHOM 8
-      rate_3: ["278502", "383097", "404358", "407612", "422608", "427313", "485833"] # FLOHOM 5, FLOHOM 9, FLOHOM 10, FLOHOM 14, FLOHOM 12, FLOHOM 11, FLOHOM 13 (randomly assigned, review this!)
-      rate_4: ["146944"] # FLOHOM 2
-      rate_5: ["366176", "345316", "510832", "514132"] # FLOHOM 7, FLOHOM 6 (equal), FLOHOM 16, Flohom 17
-      rate_6: ["260001"] # FLOHOM 4
-      rate_7: ["146908", "467334"] # FLOHOM 1 (highest), FLOHOM 15
 
   lafavezion:
     name: "Lafave Zion"
@@ -161,8 +128,14 @@ properties:
       - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) The Narrows", id: "4140___8142"}
       - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Cathedral Mountain", id: "4140___8143"}
       - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Virgin River", id: "4140___8144"}
-    rate_group_mapping:
-      rate_1: ["4140___8114", "4140___8115", "4140___8117", "4140___8118", "4140___8119", "4140___8120", "4140___8121", "4140___8122", "4140___8123", "4140___8124", "4140___8125", "4140___8126", "4140___8127", "4140___8128", "4140___8129", "4140___8130", "4140___8131", "4140___8132", "4140___8133", "4140___8134", "4140___8135", "4140___8136", "4140___8137", "4140___8138", "4140___8139", "4140___8140", "4140___8141", "4140___8142", "4140___8143", "4140___8144"]
+
+  blueridge:
+    name: "Blue Ridge"
+    pms: orbirental
+    total_units: 2
+    listings:
+      - {name: "Little Luxe Lodge - Wellness Experience", id: "3527b9f8-e4db-4220-8f47-f41ecda4d983", units: 1, batna: 200.00, batna_weekday: 200.00, batna_weekend: 300.00}
+      - {name: "Luxe Lodge A-Frame", id: "0dfcb2d6-226c-4a4a-a6eb-378ef134cd94", units: 1, batna: 550.00, batna_weekday: 550.00, batna_weekend: 800.00}
 
   mayamod1:
     name: "Maya & Mod"
@@ -172,7 +145,3 @@ properties:
       - {name: "Maya -- Maya Hotel Retreat", id: "6901008185d27c0022d3ba14", batna: 549.00, batna_weekday: 549.00, batna_weekend: 800.00}
       - {name: "Mod -- The Mod Hotel", id: "6901037df868fc002a10e0d7", batna: 449.00, batna_weekday: 449.00, batna_weekend: 700.00}
       # - {name: "M&M -- Maya & Mod Double Buyout", id: "6901051a7cc21d0029679ae6", batna: 976.00, batna_weekday: 976.00, batna_weekend: 1500.00}
-    rate_group_mapping:
-      rate_1: ["6901008185d27c0022d3ba14"] # Maya
-      rate_2: ["6901037df868fc002a10e0d7"] # Mod
-      # rate_3: ["6901051a7cc21d0029679ae6"] # M&M Double Buyout

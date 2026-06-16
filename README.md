@@ -32,7 +32,7 @@ streamlit run streamlit_app.py
 
 ## Configuration
 
-- `properties_config.yaml` — listing IDs, BATNA values, rate groups, SOS/Maya weekday-weekend floors.
+- `properties_config.yaml` — listing IDs, BATNA values, SOS/Maya/Blue Ridge weekday-weekend floors.
 
 ## Project layout
 
