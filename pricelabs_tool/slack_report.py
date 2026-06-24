@@ -66,11 +66,27 @@ def format_slack_message(
         overview += f"\n*Idempotency ledger:* `{summary['ledger_backend']}`"
     if summary.get("run_error"):
         overview += f"\n:warning: *Run error:* {summary['run_error']}"
+    if summary.get("run_error_title"):
+        overview += f"\n*Failure:* {summary['run_error_title']}"
+    if summary.get("run_error_action"):
+        overview += f"\n*What to do:* {summary['run_error_action']}"
 
     blocks = [
         {"type": "section", "text": {"type": "mrkdwn", "text": header}},
         {"type": "section", "text": {"type": "mrkdwn", "text": overview}},
     ]
+
+    if summary.get("run_error") and summary.get("total", 0) == 0:
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    "*No listings were processed.* The run failed while reading or "
+                    "locking the idempotency ledger before PriceLabs updates began."
+                ),
+            },
+        })
 
     failed = summary["failed_listings"]
     if failed:

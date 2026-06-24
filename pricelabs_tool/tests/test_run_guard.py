@@ -5,11 +5,14 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from pricelabs_tool.ledger_store import (
     FileLedgerStore,
     GitHubLedgerStore,
     LedgerRepository,
     LedgerResponseError,
+    empty_manifest,
     empty_payload,
     resolve_ledger_backend,
 )
@@ -163,8 +166,8 @@ def test_resolve_ledger_backend_prefers_github_when_token_set():
 
 
 def test_github_store_read_write_roundtrip():
-    payload = empty_payload()
-    payload["records"] = [{
+    manifest = empty_manifest()
+    shard_records = [{
         "key": "a|b|increase|2026-06-24",
         "listing_id": "a",
         "date": "b",
@@ -174,34 +177,63 @@ def test_github_store_read_write_roundtrip():
         "price_after": 105,
         "verified": True,
     }]
-    encoded = json.dumps(payload).encode()
+    manifest_encoded = json.dumps(manifest).encode()
+    shard_encoded = json.dumps({"listing_id": "a", "records": shard_records}).encode()
 
-    get_response = MagicMock()
-    get_response.status_code = 200
-    get_response.json.return_value = {
-        "content": __import__("base64").b64encode(encoded).decode(),
-        "sha": "abc123",
-    }
+    def _mock_get(url, headers=None, params=None, timeout=30):
+        response = MagicMock()
+        response.status_code = 200
+        if url.endswith("/git/ref/heads/automation-state"):
+            response.text = '{"object":{"sha":"branchsha"}}'
+            response.json.return_value = {"object": {"sha": "branchsha"}}
+            return response
+        if "manifest.json" in url:
+            response.text = '{"content":"' + __import__("base64").b64encode(manifest_encoded).decode() + '","sha":"manifestsha","size":123}'
+            response.json.return_value = {
+                "content": __import__("base64").b64encode(manifest_encoded).decode(),
+                "sha": "manifestsha",
+                "size": 123,
+            }
+            return response
+        if "/records/a.json" in url:
+            response.text = '{"content":"' + __import__("base64").b64encode(shard_encoded).decode() + '","sha":"shardsha","size":456}'
+            response.json.return_value = {
+                "content": __import__("base64").b64encode(shard_encoded).decode(),
+                "sha": "shardsha",
+                "size": 456,
+            }
+            return response
+        response.status_code = 404
+        response.text = ""
+        response.json.side_effect = ValueError("404")
+        return response
 
     put_response = MagicMock()
     put_response.status_code = 200
     put_response.raise_for_status = MagicMock()
 
-    ref_exists = MagicMock()
-    ref_exists.status_code = 200
-
-    with patch("pricelabs_tool.ledger_store.requests.get", return_value=get_response):
+    with patch("pricelabs_tool.ledger_store.requests.get", side_effect=_mock_get):
         with patch("pricelabs_tool.ledger_store.requests.put", return_value=put_response) as put:
             store = GitHubLedgerStore(
                 repo="Oasi-LLC/5percent-price-change-pricelabs",
                 token="test-token",
             )
             store._ref_ensured = True
-            loaded, sha = store.read()
-            assert sha == "abc123"
-            assert loaded["records"][0]["price_after"] == 105
-            store.write(loaded, sha)
-            put.assert_called_once()
+            loaded_manifest, sha = store.read_manifest()
+            assert sha == "manifestsha"
+            records, shard_sha = store.read_listing_shard("a")
+            assert records[0]["price_after"] == 105
+            store.write_manifest(loaded_manifest, sha)
+            store.write_listing_shard("a", records, shard_sha)
+            assert put.call_count == 2
+
+
+def test_github_store_large_file_raises_payload_error():
+    from pricelabs_tool.ledger_store import LedgerPayloadError, _decode_github_file_content
+
+    with pytest.raises(LedgerPayloadError) as exc:
+        _decode_github_file_content({"size": 2_000_000, "content": ""}, "ledger.json")
+    assert "1 MB" in str(exc.value)
 
 
 def test_github_store_empty_response_raises_ledger_response_error():

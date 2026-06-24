@@ -16,7 +16,7 @@ Cloud idempotency (recommended for Cursor cloud agents):
     ADJUSTMENT_LEDGER_BACKEND       (optional: auto | file | github; default auto)
     ADJUSTMENT_LEDGER_GITHUB_REPO   (optional; default Oasi-LLC/5percent-price-change-pricelabs)
     ADJUSTMENT_LEDGER_GITHUB_REF    (optional; default automation-state)
-    ADJUSTMENT_LEDGER_GITHUB_PATH   (optional; default data/adjustment_runs/ledger.json)
+    ADJUSTMENT_LEDGER_GITHUB_PATH   (optional; default data/adjustment_runs/manifest.json)
 """
 
 import argparse
@@ -33,6 +33,7 @@ from pricelabs_tool.batch_runner import (
     summarize_results,
 )
 from pricelabs_tool.ledger_store import get_ledger_store, resolve_ledger_backend
+from pricelabs_tool.run_errors import apply_failure_to_summary, describe_run_failure
 from pricelabs_tool.slack_report import send_slack_report
 
 load_dotenv()
@@ -93,19 +94,22 @@ def main() -> int:
 
     results: List[Dict] = []
     run_error: Optional[str] = None
+    failure_info: Optional[Dict[str, str]] = None
     try:
         results = batch_update(listings, increase=increase)
     except AdjustmentRunInProgressError as e:
         logger.error(str(e))
-        return 1
+        failure_info = describe_run_failure(e)
+        run_error = failure_info["detail"]
     except Exception as e:
         logger.exception("Batch update failed: %s", e)
-        run_error = str(e)
+        failure_info = describe_run_failure(e)
+        run_error = failure_info["detail"]
 
     summary = summarize_results(results)
     summary["ledger_backend"] = get_ledger_store().backend_name
-    if run_error:
-        summary["run_error"] = run_error
+    if failure_info:
+        apply_failure_to_summary(summary, failure_info)
 
     logger.info(
         "Run complete: %s successful, %s failed, %s skipped, %s dates updated",
@@ -115,7 +119,14 @@ def main() -> int:
         summary["dates_updated"],
     )
     if run_error:
-        logger.error("Run ended with error after processing %s listing(s): %s", len(results), run_error)
+        logger.error(
+            "Run ended with error after processing %s listing(s): %s — %s",
+            len(results),
+            summary.get("run_error_title", "failure"),
+            run_error,
+        )
+        if summary.get("run_error_action"):
+            logger.error("Suggested action: %s", summary["run_error_action"])
 
     if not args.no_slack:
         try:
