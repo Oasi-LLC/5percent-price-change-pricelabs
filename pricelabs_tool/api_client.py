@@ -86,16 +86,25 @@ class PriceLabsAPI:
             raise PriceLabsAPIError(f"Error fetching listing prices: {e}")
 
         by_listing: Dict[str, Dict[str, str]] = {}
+        requested_ids = {str(item["id"]) for item in payload_listings}
         for item in data if isinstance(data, list) else []:
             listing_id = str(item.get("id", ""))
+            if not listing_id:
+                continue
             if item.get("error") or item.get("error_status"):
                 error = item.get("error") or item.get("error_status")
-                raise PriceLabsAPIError(
-                    f"Listing prices error for {listing_id}: {error}"
+                logger.warning(
+                    "Skipping booking status for listing %s: %s",
+                    listing_id,
+                    error,
                 )
+                by_listing[listing_id] = {}
+                continue
             by_listing[listing_id] = booking_status_by_date_from_rows(
                 item.get("data", [])
             )
+        for listing_id in requested_ids:
+            by_listing.setdefault(listing_id, {})
         return by_listing
 
     def get_booking_status_for_listing(
