@@ -44,10 +44,6 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if resolve_ledger_backend() != "github":
-        print("GITHUB_TOKEN must be set for GitHub ledger migration.")
-        return 1
-
     with open(args.ledger) as f:
         payload = json.load(f)
 
@@ -69,14 +65,21 @@ def main() -> int:
         print("Manifest lock will be cleared.")
 
     if args.dry_run:
+        print("Dry run only — no files will be written to GitHub.")
         return 0
+
+    if resolve_ledger_backend() != "github":
+        print("GITHUB_TOKEN must be set for GitHub ledger migration.")
+        return 1
 
     store = get_ledger_store()
     if not isinstance(store, GitHubLedgerStore):
         print("Expected GitHub ledger store.")
         return 1
 
-    existing_manifest, manifest_sha = store.read_manifest()
+    existing_manifest, manifest_sha = store.read_manifest_if_exists()
+    if existing_manifest is None:
+        manifest_sha = None
     store.write_manifest(manifest, manifest_sha)
     print(f"Wrote manifest to {store.manifest_path}")
 
@@ -86,6 +89,10 @@ def main() -> int:
         print(f"  shard {listing_id}: {len(listing_records)} record(s)")
 
     print("Migration complete.")
+    print(
+        "Note: the old monolithic data/adjustment_runs/ledger.json can remain on "
+        "automation-state; new runs use manifest.json + records/ shards only."
+    )
     return 0
 
 

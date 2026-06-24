@@ -329,25 +329,35 @@ class GitHubLedgerStore(LedgerStore):
         if last_error:
             raise last_error
 
-    def read_manifest(self) -> Tuple[Dict[str, Any], Optional[str]]:
+    def read_manifest_if_exists(self) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        """Read sharded manifest only; does not fall back to legacy monolithic ledger."""
         payload, sha = self._read_file(self.manifest_path)
-        if payload is None:
-            legacy, legacy_sha = self._read_file(LEGACY_GITHUB_LEDGER_PATH)
-            if legacy is None:
-                return empty_manifest(), None
-            if isinstance(legacy, dict) and legacy.get("records"):
-                raise LedgerPayloadError(
-                    f"Legacy ledger file '{LEGACY_GITHUB_LEDGER_PATH}' is still monolithic. "
-                    "Run migrate_ledger_shards.py before the next automation run."
-                )
-            manifest = empty_manifest()
-            manifest["lock"] = legacy.get("lock") if isinstance(legacy, dict) else None
-            return manifest, legacy_sha
-        if not isinstance(payload, dict):
-            return empty_manifest(), sha
+        if payload is None or not isinstance(payload, dict):
+            return None, sha
         if "lock" not in payload:
             payload["lock"] = None
         return payload, sha
+
+    def read_manifest(self) -> Tuple[Dict[str, Any], Optional[str]]:
+        payload, sha = self.read_manifest_if_exists()
+        if payload is not None:
+            return payload, sha
+        try:
+            legacy, legacy_sha = self._read_file(LEGACY_GITHUB_LEDGER_PATH)
+        except LedgerPayloadError as e:
+            raise LedgerPayloadError(
+                f"{e} Run migrate_ledger_shards.py with your local ledger copy."
+            ) from e
+        if legacy is None:
+            return empty_manifest(), None
+        if isinstance(legacy, dict) and legacy.get("records"):
+            raise LedgerPayloadError(
+                f"Legacy ledger file '{LEGACY_GITHUB_LEDGER_PATH}' is still monolithic. "
+                "Run migrate_ledger_shards.py before the next automation run."
+            )
+        manifest = empty_manifest()
+        manifest["lock"] = legacy.get("lock") if isinstance(legacy, dict) else None
+        return manifest, legacy_sha
 
     def write_manifest(
         self, payload: Dict[str, Any], version_token: Optional[str] = None
