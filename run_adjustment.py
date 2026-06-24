@@ -22,6 +22,7 @@ Cloud idempotency (recommended for Cursor cloud agents):
 import argparse
 import logging
 import sys
+from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 
@@ -90,14 +91,21 @@ def main() -> int:
         listings = listings[: args.max_listings]
         logger.info("Limited to first %s listing(s) for this run", len(listings))
 
+    results: List[Dict] = []
+    run_error: Optional[str] = None
     try:
         results = batch_update(listings, increase=increase)
     except AdjustmentRunInProgressError as e:
         logger.error(str(e))
         return 1
+    except Exception as e:
+        logger.exception("Batch update failed: %s", e)
+        run_error = str(e)
 
     summary = summarize_results(results)
     summary["ledger_backend"] = get_ledger_store().backend_name
+    if run_error:
+        summary["run_error"] = run_error
 
     logger.info(
         "Run complete: %s successful, %s failed, %s skipped, %s dates updated",
@@ -106,6 +114,8 @@ def main() -> int:
         summary["skipped"],
         summary["dates_updated"],
     )
+    if run_error:
+        logger.error("Run ended with error after processing %s listing(s): %s", len(results), run_error)
 
     if not args.no_slack:
         try:
@@ -115,6 +125,9 @@ def main() -> int:
                 logger.warning("SLACK_WEBHOOK_URL not set; skipping Slack notification")
         except Exception as e:
             logger.error("Failed to send Slack report: %s", e)
+
+    if run_error:
+        return 1
 
     if summary["failed"] > 0:
         for item in summary["failed_listings"]:

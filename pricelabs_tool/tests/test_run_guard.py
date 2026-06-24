@@ -9,6 +9,7 @@ from pricelabs_tool.ledger_store import (
     FileLedgerStore,
     GitHubLedgerStore,
     LedgerRepository,
+    LedgerResponseError,
     empty_payload,
     resolve_ledger_backend,
 )
@@ -201,3 +202,35 @@ def test_github_store_read_write_roundtrip():
             assert loaded["records"][0]["price_after"] == 105
             store.write(loaded, sha)
             put.assert_called_once()
+
+
+def test_github_store_empty_response_raises_ledger_response_error():
+    empty_response = MagicMock()
+    empty_response.status_code = 200
+    empty_response.text = ""
+    empty_response.json.side_effect = json.JSONDecodeError("Expecting value", "", 0)
+
+    with patch("pricelabs_tool.ledger_store.requests.get", return_value=empty_response):
+        store = GitHubLedgerStore(
+            repo="Oasi-LLC/5percent-price-change-pricelabs",
+            token="test-token",
+        )
+        store._ref_ensured = True
+        try:
+            store.read()
+            assert False, "expected LedgerResponseError"
+        except LedgerResponseError as e:
+            assert "Empty response body" in str(e)
+
+
+def test_release_lock_survives_reload_failure():
+    with tempfile.TemporaryDirectory() as tmp:
+        store = FileLedgerStore(path=Path(tmp) / "ledger.json")
+        repo = LedgerRepository(store=store)
+        repo.acquire_lock("increase")
+        assert repo._run_id is not None
+
+        with patch.object(repo, "reload", side_effect=LedgerResponseError("bad json")):
+            repo.release_lock()
+
+        assert repo._run_id is None

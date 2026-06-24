@@ -12,6 +12,8 @@ def _direction_label(increase: bool) -> str:
 
 
 def _status_emoji(summary: Dict) -> str:
+    if summary.get("run_error"):
+        return ":warning:"
     if summary.get("double_adjustment_blocked", 0) > 0:
         return ":rotating_light:"
     if summary["failed"] > 0:
@@ -31,7 +33,10 @@ def format_slack_message(
     emoji = _status_emoji(summary)
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    header = f"{emoji} *PriceLabs adjustment complete* — {direction}"
+    if summary.get("run_error"):
+        header = f"{emoji} *PriceLabs adjustment run ended with errors* — {direction}"
+    else:
+        header = f"{emoji} *PriceLabs adjustment complete* — {direction}"
     overview = (
         f"*Run at:* {timestamp}\n"
         f"*Listings processed:* {summary['total']}\n"
@@ -59,6 +64,8 @@ def format_slack_message(
         )
     if summary.get("ledger_backend"):
         overview += f"\n*Idempotency ledger:* `{summary['ledger_backend']}`"
+    if summary.get("run_error"):
+        overview += f"\n:warning: *Run error:* {summary['run_error']}"
 
     blocks = [
         {"type": "section", "text": {"type": "mrkdwn", "text": header}},

@@ -181,5 +181,8 @@ def adjustment_run_lock(increase: bool) -> Iterator[LedgerRepository]:
     try:
         yield repo
     finally:
-        repo.release_lock()
-        logger.info("Released adjustment run lock on %s", repo.backend_name)
+        try:
+            repo.release_lock()
+            logger.info("Released adjustment run lock on %s", repo.backend_name)
+        except Exception as e:
+            logger.warning("Could not release adjustment run lock cleanly: %s", e)

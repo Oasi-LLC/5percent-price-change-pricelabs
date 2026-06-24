@@ -28,6 +28,27 @@ DEFAULT_GITHUB_PATH = "data/adjustment_runs/ledger.json"
 DEFAULT_GITHUB_REF = "automation-state"
 
 
+class LedgerResponseError(RuntimeError):
+    """GitHub ledger API returned an empty or non-JSON response."""
+
+
+def _decode_github_json(response: requests.Response, context: str) -> Dict[str, Any]:
+    text = (response.text or "").strip()
+    if not text:
+        raise LedgerResponseError(
+            f"Empty response body from GitHub ({context}), "
+            f"status={response.status_code}"
+        )
+    try:
+        return response.json()
+    except json.JSONDecodeError as e:
+        preview = text[:200]
+        raise LedgerResponseError(
+            f"Invalid JSON from GitHub ({context}), "
+            f"status={response.status_code}: {e}; body={preview!r}"
+        ) from e
+
+
 def empty_payload() -> Dict[str, Any]:
     return {"version": LEDGER_VERSION, "lock": None, "records": []}
 
@@ -154,6 +175,13 @@ class GitHubLedgerStore(LedgerStore):
             self._ref_ensured = True
             return
         if response.status_code != 404:
+            if response.status_code == 403:
+                raise PermissionError(
+                    "GitHub token cannot access git refs for "
+                    f"{self.repo}. Authorize the fine-grained PAT for Oasi-LLC SSO "
+                    "(github.com/settings/tokens → Configure SSO), or create branch "
+                    f"'{self.ref}' manually from main in the GitHub UI."
+                )
             response.raise_for_status()
 
         repo_resp = requests.get(
@@ -179,6 +207,13 @@ class GitHubLedgerStore(LedgerStore):
             timeout=30,
         )
         if create_resp.status_code not in (201, 422):
+            if create_resp.status_code == 403:
+                raise PermissionError(
+                    "GitHub token cannot create branch "
+                    f"'{self.ref}' on {self.repo}. Authorize the fine-grained PAT "
+                    "for Oasi-LLC SSO (github.com/settings/tokens → Configure SSO), "
+                    f"or create branch '{self.ref}' manually from main in the GitHub UI."
+                )
             create_resp.raise_for_status()
         self._ref_ensured = True
         logger.info("Created GitHub ledger branch %s on %s", self.ref, self.repo)
@@ -194,7 +229,7 @@ class GitHubLedgerStore(LedgerStore):
         if response.status_code == 404:
             return empty_payload(), None
         response.raise_for_status()
-        data = response.json()
+        data = _decode_github_json(response, "ledger read")
         content = base64.b64decode(data["content"]).decode("utf-8")
         payload = json.loads(content)
         if "records" not in payload:
@@ -290,8 +325,17 @@ class LedgerRepository:
     def backend_name(self) -> str:
         return self.store.backend_name
 
-    def reload(self) -> None:
-        self._payload, self._version_token = self.store.read()
+    def reload(self, *, strict: bool = True) -> None:
+        try:
+            self._payload, self._version_token = self.store.read()
+        except LedgerResponseError:
+            if strict:
+                raise
+            logger.warning(
+                "Could not reload ledger from %s; keeping in-memory state",
+                self.backend_name,
+            )
+            return
         self._records = {
             item["key"]: item
             for item in self._payload.get("records", [])
@@ -331,7 +375,15 @@ class LedgerRepository:
         self._payload["records"] = prune_records(list(self._records.values()))
         self._records = {item["key"]: item for item in self._payload["records"]}
         self.store.write(self._payload, self._version_token)
-        self.reload()
+        try:
+            self.reload()
+        except LedgerResponseError as e:
+            logger.warning(
+                "Ledger saved to %s but reload failed (%s); "
+                "in-memory records are still valid for this run",
+                self.backend_name,
+                e,
+            )
 
     def acquire_lock(self, direction: str) -> None:
         from pricelabs_tool.run_guard import AdjustmentRunInProgressError
@@ -371,21 +423,44 @@ class LedgerRepository:
     def release_lock(self) -> None:
         if not self._run_id:
             return
-        for attempt in range(GITHUB_SAVE_MAX_RETRIES):
-            self.reload()
-            lock = self._payload.get("lock")
-            if lock and lock.get("run_id") != self._run_id:
-                return
-            self._payload["lock"] = None
-            try:
-                self.store.write(self._payload, self._version_token)
-                self.reload()
-                return
-            except requests.HTTPError as e:
-                if e.response is not None and e.response.status_code == 409:
+        run_id = self._run_id
+        try:
+            for attempt in range(GITHUB_SAVE_MAX_RETRIES):
+                try:
+                    self.reload(strict=False)
+                except LedgerResponseError as e:
+                    logger.warning(
+                        "Could not reload ledger while releasing lock (attempt %s): %s",
+                        attempt + 1,
+                        e,
+                    )
                     if attempt < GITHUB_SAVE_MAX_RETRIES - 1:
                         time.sleep(0.5 * (attempt + 1))
                         continue
-                logger.warning("Could not release ledger lock cleanly: %s", e)
-                return
-        self._run_id = None
+                    return
+
+                lock = self._payload.get("lock")
+                if lock and lock.get("run_id") != run_id:
+                    return
+                self._payload["lock"] = None
+                try:
+                    self.store.write(self._payload, self._version_token)
+                    self.reload(strict=False)
+                    return
+                except requests.HTTPError as e:
+                    if e.response is not None and e.response.status_code == 409:
+                        if attempt < GITHUB_SAVE_MAX_RETRIES - 1:
+                            time.sleep(0.5 * (attempt + 1))
+                            continue
+                    logger.warning("Could not release ledger lock cleanly: %s", e)
+                    return
+                except LedgerResponseError as e:
+                    logger.warning(
+                        "Ledger lock cleared on %s but reload after write failed: %s",
+                        self.backend_name,
+                        e,
+                    )
+                    return
+        finally:
+            if self._run_id == run_id:
+                self._run_id = None
