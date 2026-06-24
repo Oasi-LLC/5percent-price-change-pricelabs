@@ -2,13 +2,110 @@
 
 import os
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import requests
+
+from pricelabs_tool.property_config import listing_to_property, load_property_config
 
 
 def _direction_label(increase: bool) -> str:
     return "Increase (+5%)" if increase else "Decrease (-5%)"
+
+
+_SLACK_TEXT_LIMIT = 2800
+_PROPERTIES_PER_BLOCK = 12
+
+
+def _aggregate_by_property(results: List[Dict]) -> List[Dict]:
+    """Roll listing results up to property groups from properties_config.yaml."""
+    prop_config = load_property_config()
+    by_key: Dict[str, Dict] = {}
+
+    for result in results:
+        prop_key, prop_name = listing_to_property(str(result.get("id")), prop_config)
+        if prop_key not in by_key:
+            by_key[prop_key] = {
+                "prop_key": prop_key,
+                "prop_name": prop_name,
+                "listings": 0,
+                "successful": 0,
+                "failed": 0,
+                "skipped": 0,
+                "dates_updated": 0,
+                "double_blocked": 0,
+                "verification_failed": 0,
+            }
+        stats = by_key[prop_key]
+        stats["listings"] += 1
+        status = result.get("status")
+        if status == "success":
+            stats["successful"] += 1
+            stats["dates_updated"] += int(result.get("dates_updated", 0) or 0)
+        elif status == "error":
+            stats["failed"] += 1
+            if result.get("double_adjustment_blocked"):
+                stats["double_blocked"] += 1
+            if result.get("verification_failed"):
+                stats["verification_failed"] += 1
+        elif status == "skipped":
+            stats["skipped"] += 1
+
+    def sort_key(item: Dict) -> Tuple[int, int, str]:
+        # Failed properties first, then those with updates, then alphabetical.
+        return (
+            -item["failed"],
+            -item["dates_updated"],
+            item["prop_name"].lower(),
+        )
+
+    return sorted(by_key.values(), key=sort_key)
+
+
+def _format_property_line(stats: Dict) -> str:
+    """One line per property — full listing accounting, no per-date detail."""
+    name = stats["prop_name"]
+    n = stats["listings"]
+    updated = stats["successful"]
+    skipped = stats["skipped"]
+    failed = stats["failed"]
+    dates = stats["dates_updated"]
+
+    updated_part = f"{updated} updated"
+    if dates:
+        updated_part += f" ({dates} date{'s' if dates != 1 else ''})"
+
+    line = (
+        f"• *{name}* — {n} listing{'s' if n != 1 else ''} · "
+        f"{updated_part} · {skipped} skipped · {failed} failed"
+    )
+    if failed:
+        if stats["double_blocked"]:
+            line += " _(double adjustment)_"
+        elif stats["verification_failed"]:
+            line += " _(verify failed)_"
+    return line
+
+
+def _build_property_summary_blocks(results: List[Dict]) -> List[Dict]:
+    """Property-level rollup for every processed listing."""
+    rows = _aggregate_by_property(results)
+    if not rows:
+        return []
+
+    lines = [_format_property_line(row) for row in rows]
+    blocks: List[Dict] = []
+    for i in range(0, len(lines), _PROPERTIES_PER_BLOCK):
+        chunk = lines[i : i + _PROPERTIES_PER_BLOCK]
+        header = "*Property summary*" if i == 0 else "*Property summary (continued)*"
+        text = header + "\n" + "\n".join(chunk)
+        if len(text) > _SLACK_TEXT_LIMIT:
+            text = text[: _SLACK_TEXT_LIMIT - 1] + "…"
+        blocks.append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": text},
+        })
+    return blocks
 
 
 def _status_emoji(summary: Dict) -> str:
@@ -75,6 +172,7 @@ def format_slack_message(
         {"type": "section", "text": {"type": "mrkdwn", "text": header}},
         {"type": "section", "text": {"type": "mrkdwn", "text": overview}},
     ]
+    blocks.extend(_build_property_summary_blocks(results))
 
     if summary.get("run_error") and summary.get("total", 0) == 0:
         blocks.append({
@@ -88,65 +186,12 @@ def format_slack_message(
             },
         })
 
-    failed = summary["failed_listings"]
-    if failed:
-        lines = []
-        for item in failed[:15]:
-            prefix = ""
-            if item.get("double_adjustment_blocked"):
-                prefix = "[DOUBLE ADJUSTMENT] "
-            elif item.get("verification_failed"):
-                prefix = "[VERIFY FAILED] "
-            lines.append(
-                f"• *{item['name']}* (`{item['id']}`): "
-                f"{prefix}{item.get('message', 'Unknown error')}"
-            )
-        if len(failed) > 15:
-            lines.append(f"_…and {len(failed) - 15} more_")
-        blocks.append({
-            "type": "section",
-            "text": {"type": "mrkdwn", "text": "*Failed listings*\n" + "\n".join(lines)},
-        })
-
-    skipped_no_work = [
-        r for r in summary["skipped_listings"]
-        if "Auto-skipped child" not in r.get("message", "")
-    ]
-    if skipped_no_work:
-        lines = []
-        for item in skipped_no_work[:10]:
-            lines.append(f"• *{item['name']}*: {item.get('message', 'Skipped')}")
-        if len(skipped_no_work) > 10:
-            lines.append(f"_…and {len(skipped_no_work) - 10} more_")
-        blocks.append({
-            "type": "section",
-            "text": {"type": "mrkdwn", "text": "*Skipped (no qualifying overrides)*\n" + "\n".join(lines)},
-        })
-
-    # Success highlights: listings with most dates updated
-    successful = sorted(
-        summary["successful_listings"],
-        key=lambda r: r.get("dates_updated", 0),
-        reverse=True,
+    fallback = (
+        f"PriceLabs {_direction_label(increase)}: "
+        f"{summary['successful']} ok, {summary['failed']} failed, "
+        f"{summary['skipped']} skipped, {summary['dates_updated']} dates updated"
     )
-    if successful:
-        lines = []
-        for item in successful[:8]:
-            batna_note = ""
-            if item.get("batna_clamped_count"):
-                batna_note = f" ({item['batna_clamped_count']} BATNA)"
-            lines.append(
-                f"• *{item['name']}*: {item.get('dates_updated', 0)} date(s){batna_note}"
-            )
-        remaining = len(successful) - 8
-        if remaining > 0:
-            lines.append(f"_…and {remaining} more successful listing(s)_")
-        blocks.append({
-            "type": "section",
-            "text": {"type": "mrkdwn", "text": "*Updated listings*\n" + "\n".join(lines)},
-        })
-
-    return {"blocks": blocks}
+    return {"text": fallback, "blocks": blocks}
 
 
 def send_slack_report(
