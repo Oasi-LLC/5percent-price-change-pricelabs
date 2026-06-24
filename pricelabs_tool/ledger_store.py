@@ -1,0 +1,391 @@
+"""Pluggable persistence for adjustment ledger and distributed run locks."""
+
+import base64
+import json
+import logging
+import os
+import time
+import uuid
+from abc import ABC, abstractmethod
+from datetime import date, datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import requests
+
+logger = logging.getLogger(__name__)
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+LEDGER_DIR = PROJECT_ROOT / "data" / "adjustment_runs"
+LEDGER_FILE = LEDGER_DIR / "ledger.json"
+
+LEDGER_VERSION = 1
+LEDGER_RETENTION_DAYS = 14
+RUN_LOCK_MAX_AGE_SECONDS = 3 * 60 * 60
+GITHUB_SAVE_MAX_RETRIES = 5
+DEFAULT_GITHUB_REPO = "Oasi-LLC/5percent-price-change-pricelabs"
+DEFAULT_GITHUB_PATH = "data/adjustment_runs/ledger.json"
+DEFAULT_GITHUB_REF = "automation-state"
+
+
+def empty_payload() -> Dict[str, Any]:
+    return {"version": LEDGER_VERSION, "lock": None, "records": []}
+
+
+def prune_records(records: List[Dict]) -> List[Dict]:
+    cutoff = date.today() - timedelta(days=LEDGER_RETENTION_DAYS)
+    kept = []
+    for item in records:
+        run_day = item.get("run_day", "")
+        try:
+            if datetime.strptime(run_day, "%Y-%m-%d").date() >= cutoff:
+                kept.append(item)
+        except ValueError:
+            continue
+    return kept
+
+
+def _lock_is_stale(lock: Optional[Dict]) -> bool:
+    if not lock:
+        return True
+    started = lock.get("started_at", "")
+    try:
+        started_dt = datetime.fromisoformat(started.replace("Z", "+00:00"))
+        if started_dt.tzinfo:
+            started_dt = started_dt.replace(tzinfo=None)
+        age = (datetime.utcnow() - started_dt).total_seconds()
+        return age > RUN_LOCK_MAX_AGE_SECONDS
+    except (ValueError, TypeError):
+        return True
+
+
+class LedgerStore(ABC):
+    @property
+    @abstractmethod
+    def backend_name(self) -> str:
+        pass
+
+    @abstractmethod
+    def read(self) -> Tuple[Dict[str, Any], Optional[str]]:
+        """Return (payload, version_token). version_token is used for conditional writes."""
+        ...
+
+    @abstractmethod
+    def write(self, payload: Dict[str, Any], version_token: Optional[str] = None) -> None:
+        ...
+
+
+class FileLedgerStore(LedgerStore):
+    """Local file store for Streamlit and local CLI runs."""
+
+    def __init__(self, path: Path = LEDGER_FILE):
+        self.path = path
+
+    @property
+    def backend_name(self) -> str:
+        return f"file:{self.path}"
+
+    def read(self) -> Tuple[Dict[str, Any], Optional[str]]:
+        if not self.path.exists():
+            return empty_payload(), None
+        try:
+            with open(self.path) as f:
+                data = json.load(f) or {}
+            if "records" not in data:
+                data = empty_payload()
+            if "lock" not in data:
+                data["lock"] = None
+            return data, "file"
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Could not read local ledger (%s); starting fresh", e)
+            return empty_payload(), None
+
+    def write(self, payload: Dict[str, Any], version_token: Optional[str] = None) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.path, "w") as f:
+            json.dump(payload, f, indent=2)
+
+
+class GitHubLedgerStore(LedgerStore):
+    """
+    GitHub Contents API store for cloud agents with ephemeral filesystems.
+
+    Persists ledger on a dedicated branch (default: automation-state) so morning
+    and evening runs share idempotency state across separate cloud VMs.
+    """
+
+    def __init__(
+        self,
+        repo: str,
+        path: str = DEFAULT_GITHUB_PATH,
+        ref: str = DEFAULT_GITHUB_REF,
+        token: Optional[str] = None,
+    ):
+        self.repo = repo
+        self.path = path.lstrip("/")
+        self.ref = ref
+        self.token = token or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+        if not self.token:
+            raise ValueError(
+                "GITHUB_TOKEN (or GH_TOKEN) is required for GitHub ledger backend"
+            )
+        self._contents_url = (
+            f"https://api.github.com/repos/{self.repo}/contents/{self.path}"
+        )
+        self._ref_ensured = False
+
+    @property
+    def backend_name(self) -> str:
+        return f"github:{self.repo}@{self.ref}:{self.path}"
+
+    def _headers(self) -> Dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+
+    def _ensure_ref_exists(self) -> None:
+        if self._ref_ensured:
+            return
+        ref_url = f"https://api.github.com/repos/{self.repo}/git/ref/heads/{self.ref}"
+        response = requests.get(ref_url, headers=self._headers(), timeout=30)
+        if response.status_code == 200:
+            self._ref_ensured = True
+            return
+        if response.status_code != 404:
+            response.raise_for_status()
+
+        repo_resp = requests.get(
+            f"https://api.github.com/repos/{self.repo}",
+            headers=self._headers(),
+            timeout=30,
+        )
+        repo_resp.raise_for_status()
+        default_branch = repo_resp.json()["default_branch"]
+
+        base_resp = requests.get(
+            f"https://api.github.com/repos/{self.repo}/git/ref/heads/{default_branch}",
+            headers=self._headers(),
+            timeout=30,
+        )
+        base_resp.raise_for_status()
+        base_sha = base_resp.json()["object"]["sha"]
+
+        create_resp = requests.post(
+            f"https://api.github.com/repos/{self.repo}/git/refs",
+            headers=self._headers(),
+            json={"ref": f"refs/heads/{self.ref}", "sha": base_sha},
+            timeout=30,
+        )
+        if create_resp.status_code not in (201, 422):
+            create_resp.raise_for_status()
+        self._ref_ensured = True
+        logger.info("Created GitHub ledger branch %s on %s", self.ref, self.repo)
+
+    def read(self) -> Tuple[Dict[str, Any], Optional[str]]:
+        self._ensure_ref_exists()
+        response = requests.get(
+            self._contents_url,
+            headers=self._headers(),
+            params={"ref": self.ref},
+            timeout=30,
+        )
+        if response.status_code == 404:
+            return empty_payload(), None
+        response.raise_for_status()
+        data = response.json()
+        content = base64.b64decode(data["content"]).decode("utf-8")
+        payload = json.loads(content)
+        if "records" not in payload:
+            payload = empty_payload()
+        if "lock" not in payload:
+            payload["lock"] = None
+        return payload, data.get("sha")
+
+    def write(self, payload: Dict[str, Any], version_token: Optional[str] = None) -> None:
+        self._ensure_ref_exists()
+        encoded = base64.b64encode(
+            json.dumps(payload, indent=2).encode("utf-8")
+        ).decode("ascii")
+        body: Dict[str, Any] = {
+            "message": "chore: update PriceLabs adjustment ledger",
+            "content": encoded,
+            "branch": self.ref,
+        }
+        if version_token:
+            body["sha"] = version_token
+
+        last_error: Optional[Exception] = None
+        for attempt in range(GITHUB_SAVE_MAX_RETRIES):
+            try:
+                response = requests.put(
+                    self._contents_url,
+                    headers=self._headers(),
+                    json=body,
+                    timeout=30,
+                )
+                if response.status_code == 409:
+                    fresh_payload, fresh_sha = self.read()
+                    body["sha"] = fresh_sha
+                    if fresh_sha is None:
+                        body.pop("sha", None)
+                    if attempt < GITHUB_SAVE_MAX_RETRIES - 1:
+                        logger.warning(
+                            "GitHub ledger write conflict (attempt %s); retrying",
+                            attempt + 1,
+                        )
+                        time.sleep(0.5 * (attempt + 1))
+                        continue
+                response.raise_for_status()
+                return
+            except requests.RequestException as e:
+                last_error = e
+                if attempt < GITHUB_SAVE_MAX_RETRIES - 1:
+                    time.sleep(0.5 * (attempt + 1))
+                    continue
+                raise
+        if last_error:
+            raise last_error
+
+
+def resolve_ledger_backend() -> str:
+    explicit = (os.getenv("ADJUSTMENT_LEDGER_BACKEND") or "auto").strip().lower()
+    if explicit in ("file", "github"):
+        return explicit
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    repo = os.getenv("ADJUSTMENT_LEDGER_GITHUB_REPO") or DEFAULT_GITHUB_REPO
+    if token and repo:
+        return "github"
+    return "file"
+
+
+def get_ledger_store() -> LedgerStore:
+    backend = resolve_ledger_backend()
+    if backend == "github":
+        repo = os.getenv("ADJUSTMENT_LEDGER_GITHUB_REPO") or DEFAULT_GITHUB_REPO
+        path = os.getenv("ADJUSTMENT_LEDGER_GITHUB_PATH") or DEFAULT_GITHUB_PATH
+        ref = os.getenv("ADJUSTMENT_LEDGER_GITHUB_REF") or DEFAULT_GITHUB_REF
+        store = GitHubLedgerStore(repo=repo, path=path, ref=ref)
+        logger.info("Using GitHub adjustment ledger (%s)", store.backend_name)
+        return store
+
+    store = FileLedgerStore()
+    logger.info("Using local file adjustment ledger (%s)", store.backend_name)
+    return store
+
+
+class LedgerRepository:
+    """Read/modify/save ledger payload with optional distributed lock."""
+
+    def __init__(self, store: Optional[LedgerStore] = None):
+        self.store = store or get_ledger_store()
+        self._payload = empty_payload()
+        self._version_token: Optional[str] = None
+        self._records: Dict[str, Dict] = {}
+        self._run_id: Optional[str] = None
+        self.reload()
+
+    @property
+    def backend_name(self) -> str:
+        return self.store.backend_name
+
+    def reload(self) -> None:
+        self._payload, self._version_token = self.store.read()
+        self._records = {
+            item["key"]: item
+            for item in self._payload.get("records", [])
+            if item.get("key")
+        }
+
+    def get_record(
+        self, listing_id: str, override_date: str, direction: str, run_day: str
+    ) -> Optional[Dict]:
+        key = f"{listing_id}|{override_date}|{direction}|{run_day}"
+        return self._records.get(key)
+
+    def record_verified(
+        self,
+        listing_id: str,
+        override_date: str,
+        direction: str,
+        run_day: str,
+        price_before: int,
+        price_after: int,
+    ) -> None:
+        key = f"{listing_id}|{override_date}|{direction}|{run_day}"
+        self._records[key] = {
+            "key": key,
+            "listing_id": listing_id,
+            "date": override_date,
+            "direction": direction,
+            "run_day": run_day,
+            "price_before": price_before,
+            "price_after": price_after,
+            "verified": True,
+            "recorded_at": datetime.utcnow().isoformat() + "Z",
+        }
+
+    def save(self) -> None:
+        self._payload["version"] = LEDGER_VERSION
+        self._payload["records"] = prune_records(list(self._records.values()))
+        self._records = {item["key"]: item for item in self._payload["records"]}
+        self.store.write(self._payload, self._version_token)
+        self.reload()
+
+    def acquire_lock(self, direction: str) -> None:
+        from pricelabs_tool.run_guard import AdjustmentRunInProgressError
+
+        self._run_id = str(uuid.uuid4())
+        for attempt in range(GITHUB_SAVE_MAX_RETRIES):
+            self.reload()
+            lock = self._payload.get("lock")
+            if lock and not _lock_is_stale(lock):
+                if lock.get("run_id") == self._run_id:
+                    return
+                raise AdjustmentRunInProgressError(
+                    f"Another adjustment run is in progress "
+                    f"(direction={lock.get('direction', 'unknown')}, "
+                    f"started={lock.get('started_at', 'unknown')}, "
+                    f"backend={self.backend_name}). "
+                    f"Wait for it to finish before starting a new run."
+                )
+
+            self._payload["lock"] = {
+                "run_id": self._run_id,
+                "direction": direction,
+                "started_at": datetime.utcnow().isoformat() + "Z",
+                "backend": self.store.backend_name,
+            }
+            try:
+                self.store.write(self._payload, self._version_token)
+                self.reload()
+                return
+            except requests.HTTPError as e:
+                if e.response is not None and e.response.status_code == 409:
+                    if attempt < GITHUB_SAVE_MAX_RETRIES - 1:
+                        time.sleep(0.5 * (attempt + 1))
+                        continue
+                raise
+
+    def release_lock(self) -> None:
+        if not self._run_id:
+            return
+        for attempt in range(GITHUB_SAVE_MAX_RETRIES):
+            self.reload()
+            lock = self._payload.get("lock")
+            if lock and lock.get("run_id") != self._run_id:
+                return
+            self._payload["lock"] = None
+            try:
+                self.store.write(self._payload, self._version_token)
+                self.reload()
+                return
+            except requests.HTTPError as e:
+                if e.response is not None and e.response.status_code == 409:
+                    if attempt < GITHUB_SAVE_MAX_RETRIES - 1:
+                        time.sleep(0.5 * (attempt + 1))
+                        continue
+                logger.warning("Could not release ledger lock cleanly: %s", e)
+                return
+        self._run_id = None

@@ -1,5 +1,4 @@
 import streamlit as st
-import time
 import os
 import pandas as pd
 from typing import List, Dict
@@ -7,15 +6,16 @@ from itertools import groupby
 import logging
 from dotenv import load_dotenv
 
-from pricelabs_tool.adjustment import compute_listing_adjustments
-from pricelabs_tool.api_client import PriceLabsAPI
+from pricelabs_tool.batch_runner import (
+    AdjustmentRunInProgressError,
+    batch_update,
+    fetch_active_listings,
+)
 from pricelabs_tool.property_config import (
     exclude_listings_not_in_config,
-    extract_parent_listing_id,
     load_property_config,
     listing_to_property,
     sort_listings_by_property,
-    split_children_of_selected_update_children_parents,
 )
 
 # Load environment variables
@@ -24,7 +24,6 @@ load_dotenv()
 # Configuration
 API_KEY = os.getenv('PRICELABS_API_KEY')
 BASE_URL = os.getenv('API_BASE_URL', 'https://api.pricelabs.co/v1')
-ADJUSTMENT_PERCENTAGE = 5  # 5% adjustment
 APP_PASSWORD = os.getenv('APP_PASSWORD')  # Optional: when set, requires @stayoasi.com + this password to access
 
 # Validation
@@ -48,153 +47,6 @@ def _st_rerun() -> None:
         rerun()
     else:
         st.experimental_rerun()
-
-
-# Retry: any failure is retried for that listing
-MAX_RETRIES_PER_LISTING = 3
-RETRY_BACKOFF_SECONDS = (5, 10)
-
-
-# --- Helper functions ---
-def fetch_listings():
-    api_client = PriceLabsAPI()
-    listings = api_client.get_listings()
-    active_listings = [
-        l for l in listings
-        if not l.get('isHidden', True) and l.get('push_enabled', False)
-    ]
-    return active_listings
-
-def batch_update(
-    listings,
-    increase,
-    batch_size=10,
-    delay=2,
-    per_listing_delay=2,
-):
-    """Process listings in batches and upload adjusted overrides to PriceLabs."""
-    prop_config = load_property_config()
-    results = []
-    listings, auto_skipped_children = split_children_of_selected_update_children_parents(
-        listings, prop_config
-    )
-    for child in auto_skipped_children:
-        parent_id = extract_parent_listing_id(child)
-        msg = "Auto-skipped child listing: selected parent has update_children=true"
-        if parent_id:
-            msg += f" (parent_id={parent_id})"
-        results.append({
-            "id": child["id"],
-            "name": child.get("name", str(child.get("id"))),
-            "status": "skipped",
-            "message": msg,
-        })
-
-    total = len(listings)
-    for i in range(0, total, batch_size):
-        batch = listings[i : i + batch_size]
-        st.info(
-            f"Processing batch {i // batch_size + 1} of "
-            f"{(total + batch_size - 1) // batch_size} ({len(batch)} listings)"
-        )
-        for listing in batch:
-            last_error = None
-            for attempt in range(MAX_RETRIES_PER_LISTING):
-                try:
-                    api_client = PriceLabsAPI()
-                    overrides = api_client.get_listing_overrides(
-                        listing["id"], pms=listing.get("pms")
-                    )
-                    all_pulled = overrides.get("overrides", [])
-                    computed = compute_listing_adjustments(
-                        listing,
-                        all_pulled,
-                        prop_config,
-                        increase=increase,
-                        adjustment_percentage=ADJUSTMENT_PERCENTAGE,
-                    )
-                    skipped = computed["skipped"]
-                    num_qualifying = computed["would_update"]
-                    num_skipped = (
-                        skipped["not_fixed"]
-                        + skipped["date_range"]
-                        + skipped["bad_price"]
-                    )
-                    if num_qualifying == 0:
-                        msg = (
-                            "No overrides in valid range (fixed, today or future, ≤1 year) to update"
-                        )
-                        if all_pulled:
-                            msg += (
-                                f". Pulled {len(all_pulled)} total (skipped: "
-                                f"{skipped['not_fixed']} non-fixed, "
-                                f"{skipped['date_range']} out of date range, "
-                                f"{skipped['bad_price']} bad price)"
-                            )
-                        results.append({
-                            "id": listing["id"],
-                            "name": listing["name"],
-                            "status": "skipped",
-                            "message": msg,
-                        })
-                        last_error = None
-                        break
-
-                    if computed["update_children"]:
-                        logger.info(
-                            "listing_id=%s name=%s update_children=true (property=%s)",
-                            listing.get("id"),
-                            listing.get("name"),
-                            computed["prop_key"],
-                        )
-                    api_client.update_listing_overrides(
-                        listing["id"],
-                        computed["adjusted_overrides"],
-                        pms=listing.get("pms"),
-                        update_children=computed["update_children"],
-                    )
-
-                    results.append({
-                        "id": listing["id"],
-                        "name": listing["name"],
-                        "status": "success",
-                        "dates_updated": num_qualifying,
-                        "batna_clamped_count": computed["batna_clamped_count"],
-                        "skipped_count": num_skipped,
-                        "skipped_not_fixed": skipped["not_fixed"],
-                        "skipped_date_range": skipped["date_range"],
-                        "skipped_bad_price": skipped["bad_price"],
-                    })
-                    last_error = None
-                    break
-                except Exception as e:
-                    last_error = e
-                    if attempt < MAX_RETRIES_PER_LISTING - 1:
-                        wait = (
-                            RETRY_BACKOFF_SECONDS[attempt]
-                            if attempt < len(RETRY_BACKOFF_SECONDS)
-                            else 10
-                        )
-                        logger.warning(
-                            "Listing %s attempt %s failed (%s); retrying in %ss",
-                            listing.get("id"),
-                            attempt + 1,
-                            e,
-                            wait,
-                        )
-                        time.sleep(wait)
-                    else:
-                        results.append({
-                            "id": listing["id"],
-                            "name": listing["name"],
-                            "status": "error",
-                            "message": str(last_error),
-                        })
-                        break
-            time.sleep(per_listing_delay)
-        if i + batch_size < total:
-            time.sleep(delay)
-    return results
 
 
 # --- Streamlit UI ---
@@ -240,7 +92,7 @@ if 'last_increase' not in st.session_state:
 # Refresh listings button
 if st.button('Refresh Listings from PriceLabs'):
     with st.spinner('Fetching latest listings...'):
-        raw_listings = fetch_listings()
+        raw_listings = fetch_active_listings()
         prop_cfg = load_property_config()
         configured_listings, n_excluded_other = exclude_listings_not_in_config(raw_listings, prop_cfg)
         st.session_state['listings'] = configured_listings
@@ -331,7 +183,15 @@ if listings:
 
         if st.button("Apply Price Adjustments", type="primary"):
             st.info("Applying changes...")
-            results = batch_update(selected_listing_objects, increase)
+            try:
+                results = batch_update(
+                    selected_listing_objects,
+                    increase,
+                    progress_callback=st.info,
+                )
+            except AdjustmentRunInProgressError as e:
+                st.error(str(e))
+                st.stop()
 
             st.session_state["failed_listings"] = [r for r in results if r["status"] == "error"]
             st.session_state["last_increase"] = increase
@@ -356,11 +216,19 @@ if listings:
             for result in results:
                 if result["status"] == "success":
                     n = result.get("dates_updated", 0)
+                    verified = result.get("dates_verified", n)
                     skip = result.get("skipped_count", 0)
                     batna_n = result.get("batna_clamped_count", 0)
+                    already = result.get("already_adjusted_count", 0)
                     batna_note = f" {batna_n} date(s) set to BATNA floor." if batna_n else ""
+                    verified_note = f" {verified} date(s) verified." if verified else ""
+                    already_note = (
+                        f" {already} date(s) already at target (skipped)." if already else ""
+                    )
                     if skip:
                         parts = []
+                        if result.get("skipped_booked"):
+                            parts.append(f"{result['skipped_booked']} booked")
                         if result.get("skipped_not_fixed"):
                             parts.append(f"{result['skipped_not_fixed']} non-fixed")
                         if result.get("skipped_date_range"):
@@ -368,17 +236,22 @@ if listings:
                         if result.get("skipped_bad_price"):
                             parts.append(f"{result['skipped_bad_price']} bad price")
                         st.success(
-                            f"✅ {result['name']}: All {n} date(s) updated.{batna_note} "
+                            f"✅ {result['name']}: All {n} date(s) updated.{batna_note}{verified_note}{already_note} "
                             f"{skip} override(s) in PriceLabs not changed: {', '.join(parts)}."
                         )
                     else:
                         st.success(
-                            f"✅ {result['name']}: All {n} date(s) updated successfully.{batna_note}"
+                            f"✅ {result['name']}: All {n} date(s) updated successfully.{batna_note}{verified_note}{already_note}"
                         )
                 elif result["status"] == "skipped":
                     st.warning(f"⏭️ {result['name']}: {result.get('message', 'Skipped')}")
                 else:
-                    st.error(f"❌ {result['name']}: {result['message']}")
+                    prefix = ""
+                    if result.get("double_adjustment_blocked"):
+                        prefix = "🚫 Double adjustment blocked: "
+                    elif result.get("verification_failed"):
+                        prefix = "⚠️ Verification failed: "
+                    st.error(f"❌ {result['name']}: {prefix}{result['message']}")
 
     # Failed listings table and manual retry (shown whenever there are stored failures)
     failed_listings = st.session_state.get('failed_listings', [])
@@ -398,7 +271,15 @@ if listings:
                 st.warning("Could not find listing details for failed IDs. Click 'Refresh Listings from PriceLabs' and try again.")
             else:
                 with st.spinner("Retrying failed listings..."):
-                    retry_results = batch_update(retry_objects, st.session_state['last_increase'])
+                    try:
+                        retry_results = batch_update(
+                            retry_objects,
+                            st.session_state['last_increase'],
+                            progress_callback=st.info,
+                        )
+                    except AdjustmentRunInProgressError as e:
+                        st.error(str(e))
+                        st.stop()
                 still_failed = [r for r in retry_results if r['status'] == 'error']
                 st.session_state['failed_listings'] = still_failed
                 retried_ok = len(retry_results) - len(still_failed)

@@ -10,6 +10,9 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
+from pricelabs_tool.bookings import booking_status_by_date_from_rows
+
+
 class PriceLabsAPI:
     def __init__(self):
         self.api_key = os.getenv("PRICELABS_API_KEY")
@@ -50,6 +53,57 @@ class PriceLabsAPI:
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching overrides for listing {listing_id}: {e}")
             raise PriceLabsAPIError(f"Error fetching overrides: {e}")
+
+    def get_booking_status_by_listing(
+        self, listings: List[Dict]
+    ) -> Dict[str, Dict[str, str]]:
+        """
+        Fetch booking_status per date via POST /listing_prices.
+
+        Args:
+            listings: [{"id": "...", "pms": "..."}, ...]
+
+        Returns:
+            {listing_id: {date: booking_status, ...}, ...}
+        """
+        payload_listings = [
+            {"id": str(item["id"]), "pms": item["pms"]}
+            for item in listings
+            if item.get("id") and item.get("pms")
+        ]
+        if not payload_listings:
+            return {}
+
+        try:
+            response = self.session.post(
+                f"{self.base_url}/listing_prices",
+                json={"listings": payload_listings},
+            )
+            response.raise_for_status()
+            data = response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error("Error fetching listing prices for booking status: %s", e)
+            raise PriceLabsAPIError(f"Error fetching listing prices: {e}")
+
+        by_listing: Dict[str, Dict[str, str]] = {}
+        for item in data if isinstance(data, list) else []:
+            listing_id = str(item.get("id", ""))
+            if item.get("error") or item.get("error_status"):
+                error = item.get("error") or item.get("error_status")
+                raise PriceLabsAPIError(
+                    f"Listing prices error for {listing_id}: {error}"
+                )
+            by_listing[listing_id] = booking_status_by_date_from_rows(
+                item.get("data", [])
+            )
+        return by_listing
+
+    def get_booking_status_for_listing(
+        self, listing_id: str, pms: str
+    ) -> Dict[str, str]:
+        """Fetch booking_status per date for a single listing."""
+        result = self.get_booking_status_by_listing([{"id": listing_id, "pms": pms}])
+        return result.get(str(listing_id), {})
 
     def update_listing_overrides(
         self,

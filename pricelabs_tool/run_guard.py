@@ -1,0 +1,185 @@
+"""Run lock and adjustment ledger to prevent double adjustments."""
+
+import logging
+from contextlib import contextmanager
+from datetime import date
+from pathlib import Path
+from typing import Dict, Iterator, List, Optional, Tuple
+
+from pricelabs_tool.ledger_store import LedgerRepository, get_ledger_store
+
+logger = logging.getLogger(__name__)
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+LEDGER_DIR = PROJECT_ROOT / "data" / "adjustment_runs"
+LEDGER_FILE = LEDGER_DIR / "ledger.json"
+LOCK_FILE = LEDGER_DIR / "run.lock"
+
+
+class AdjustmentRunInProgressError(Exception):
+    """Raised when another adjustment run holds the lock."""
+
+
+class DoubleAdjustmentError(Exception):
+    """Raised when prices suggest a duplicate adjustment for the same direction."""
+
+
+def _direction_key(increase: bool) -> str:
+    return "increase" if increase else "decrease"
+
+
+def run_day_local() -> str:
+    return date.today().isoformat()
+
+
+class AdjustmentLedger:
+    """Persistent record of verified adjustments per listing/date/direction/day."""
+
+    def __init__(self, repository: Optional[LedgerRepository] = None):
+        self._repo = repository or LedgerRepository(get_ledger_store())
+
+    @property
+    def backend_name(self) -> str:
+        return self._repo.backend_name
+
+    def get_record(
+        self, listing_id: str, override_date: str, direction: str, run_day: str
+    ) -> Optional[Dict]:
+        return self._repo.get_record(listing_id, override_date, direction, run_day)
+
+    def record_verified(
+        self,
+        listing_id: str,
+        override_date: str,
+        direction: str,
+        run_day: str,
+        price_before: int,
+        price_after: int,
+    ) -> None:
+        self._repo.record_verified(
+            listing_id,
+            override_date,
+            direction,
+            run_day,
+            price_before,
+            price_after,
+        )
+
+    def save(self) -> None:
+        self._repo.save()
+
+
+def evaluate_date_action(
+    listing_id: str,
+    override_date: str,
+    increase: bool,
+    price_before: float,
+    price_after: int,
+    run_day: str,
+    ledger: AdjustmentLedger,
+) -> Tuple[str, Optional[str]]:
+    """
+    Decide whether to apply, skip, or block an adjustment for one date.
+
+    Returns:
+        (action, reason) where action is "apply", "skip", or "block"
+    """
+    direction = _direction_key(increase)
+    current = int(price_before)
+    record = ledger.get_record(listing_id, override_date, direction, run_day)
+
+    if record and record.get("verified"):
+        expected_after = int(record["price_after"])
+        if current == expected_after:
+            return "skip", "Already adjusted and verified today for this direction"
+        if increase and current > expected_after:
+            return "block", (
+                f"Double adjustment suspected on {override_date}: "
+                f"current ${current} exceeds verified target ${expected_after}"
+            )
+        if not increase and current < expected_after:
+            return "block", (
+                f"Double adjustment suspected on {override_date}: "
+                f"current ${current} below verified target ${expected_after}"
+            )
+        logger.warning(
+            "listing=%s date=%s price changed since verified run (was %s, now %s); re-applying",
+            listing_id,
+            override_date,
+            expected_after,
+            current,
+        )
+
+    if current == price_after:
+        return "skip", "Price already at computed target (no change needed)"
+
+    return "apply", None
+
+
+def filter_adjustments_for_idempotency(
+    listing_id: str,
+    preview_rows: List[Dict],
+    adjusted_overrides: List[Dict],
+    increase: bool,
+    run_day: str,
+    ledger: AdjustmentLedger,
+) -> Tuple[List[Dict], Dict]:
+    """
+    Filter overrides to apply based on ledger and current prices.
+
+    Returns:
+        (overrides_to_apply, stats dict with apply/skip/block counts and block messages)
+    """
+    preview_by_date = {row["date"]: row for row in preview_rows}
+    stats = {
+        "apply_count": 0,
+        "skip_already_done": 0,
+        "skip_no_change": 0,
+        "blocked": 0,
+        "block_messages": [],
+    }
+    to_apply: List[Dict] = []
+
+    for override in adjusted_overrides:
+        override_date = override["date"]
+        row = preview_by_date.get(override_date)
+        if not row:
+            continue
+
+        action, reason = evaluate_date_action(
+            listing_id,
+            override_date,
+            increase,
+            row["old_price"],
+            int(override["price"]),
+            run_day,
+            ledger,
+        )
+
+        if action == "apply":
+            stats["apply_count"] += 1
+            to_apply.append(override)
+        elif action == "skip":
+            if reason and "Already adjusted" in reason:
+                stats["skip_already_done"] += 1
+            else:
+                stats["skip_no_change"] += 1
+        elif action == "block":
+            stats["blocked"] += 1
+            stats["block_messages"].append(reason or "Blocked")
+
+    return to_apply, stats
+
+
+@contextmanager
+def adjustment_run_lock(increase: bool) -> Iterator[LedgerRepository]:
+    """Prevent overlapping adjustment runs across local and cloud environments."""
+    repo = LedgerRepository(get_ledger_store())
+    direction = _direction_key(increase)
+    logger.info("Acquiring adjustment run lock via %s", repo.backend_name)
+    repo.acquire_lock(direction)
+    try:
+        yield repo
+    finally:
+        repo.release_lock()
+        logger.info("Released adjustment run lock on %s", repo.backend_name)

@@ -26,6 +26,9 @@ build/
 logs/
 *.log
 
+# Adjustment run ledger and locks (local idempotency state)
+data/adjustment_runs/
+
 # IDE specific files
 .idea/
 .vscode/

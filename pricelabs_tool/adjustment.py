@@ -8,6 +8,7 @@ from pricelabs_tool.batna import (
     batna_floor_for_date,
     calculate_adjusted_price,
 )
+from pricelabs_tool.bookings import is_booked_status
 from pricelabs_tool.property_config import is_date_in_valid_range, listing_to_property
 
 
@@ -24,6 +25,7 @@ def compute_listing_adjustments(
     prop_config: Dict,
     increase: bool,
     adjustment_percentage: float = 5,
+    booking_by_date: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """
     Build override payloads and preview rows for one listing.
@@ -32,7 +34,7 @@ def compute_listing_adjustments(
     listing_id = str(listing.get("id"))
     adjusted_overrides: List[Dict] = []
     preview_rows: List[Dict[str, Any]] = []
-    skipped = {"not_fixed": 0, "date_range": 0, "bad_price": 0}
+    skipped = {"not_fixed": 0, "date_range": 0, "bad_price": 0, "booked": 0}
     batna_clamped_count = 0
 
     for override in all_pulled:
@@ -46,6 +48,11 @@ def compute_listing_adjustments(
         old_price = float(override.get("price", 0))
         if old_price <= 0:
             skipped["bad_price"] += 1
+            continue
+        if booking_by_date is not None and is_booked_status(
+            booking_by_date.get(override_date)
+        ):
+            skipped["booked"] += 1
             continue
 
         floor = batna_floor_for_date(listing_id, override_date, prop_config)
