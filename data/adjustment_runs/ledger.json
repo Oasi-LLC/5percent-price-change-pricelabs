@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "lock": {
+    "run_id": "bee24693-c989-4369-8ade-459524e3396f",
+    "direction": "increase",
+    "started_at": "2026-06-24T14:43:33.889672Z",
+    "backend": "github:Oasi-LLC/5percent-price-change-pricelabs@automation-state:data/adjustment_runs/ledger.json"
+  },
+  "records": []
+}
