@@ -108,6 +108,76 @@ def _build_property_summary_blocks(results: List[Dict]) -> List[Dict]:
     return blocks
 
 
+def _properties_needing_csr_sync(results: List[Dict]) -> List[Dict]:
+    """Properties where the API applied at least one date change."""
+    rows = _aggregate_by_property(results)
+    return [row for row in rows if row["dates_updated"] > 0]
+
+
+def _build_csr_followup_text(
+    increase: bool, summary: Dict, results: List[Dict]
+) -> str:
+    """Instructions for CSR to complete Save and Refresh / Sync now in PriceLabs UI."""
+    direction_word = "+5%" if increase else "-5%"
+    updated_props = _properties_needing_csr_sync(results)
+    failed_props = [
+        row for row in _aggregate_by_property(results) if row["failed"] > 0
+    ]
+
+    lines = [
+        "*CSR follow-up — PriceLabs UI*",
+        (
+            "This automation updates fixed overrides through the PriceLabs API. "
+            "CSR must confirm changes in the PriceLabs frontend so rates save and "
+            "sync to booking channels."
+        ),
+        "",
+        "*Steps:*",
+        "1. Open *Multi-Calendar* in PriceLabs",
+        "2. Select *all listings*",
+        '3. Click *Save and Refresh*',
+        '4. Click *Sync now*',
+        "5. Spot-check a few upcoming dates match the expected "
+        f"{direction_word} adjustment for this run",
+    ]
+
+    if updated_props:
+        lines.append("")
+        lines.append("*Properties with API updates this run:*")
+        for row in updated_props:
+            lines.append(
+                f"• *{row['prop_name']}* — {row['successful']} listing(s), "
+                f"{row['dates_updated']} date(s)"
+            )
+    else:
+        lines.append("")
+        lines.append(
+            "_No properties received new API updates this run "
+            "(all listings skipped or already at target). No Save/Sync needed unless "
+            "you are verifying a prior run._"
+        )
+
+    if failed_props:
+        lines.append("")
+        lines.append(
+            ":warning: *Properties with failures — do not sync until ops reviews:*"
+        )
+        for row in failed_props:
+            note = ""
+            if row["double_blocked"]:
+                note = " (double adjustment)"
+            elif row["verification_failed"]:
+                note = " (verify failed)"
+            lines.append(
+                f"• *{row['prop_name']}* — {row['failed']} listing(s) failed{note}"
+            )
+
+    text = "\n".join(lines)
+    if len(text) > _SLACK_TEXT_LIMIT:
+        text = text[: _SLACK_TEXT_LIMIT - 1] + "…"
+    return text
+
+
 def _status_emoji(summary: Dict) -> str:
     if summary.get("run_error"):
         return ":warning:"
@@ -173,6 +243,10 @@ def format_slack_message(
         {"type": "section", "text": {"type": "mrkdwn", "text": overview}},
     ]
     blocks.extend(_build_property_summary_blocks(results))
+    blocks.append({
+        "type": "section",
+        "text": {"type": "mrkdwn", "text": _build_csr_followup_text(increase, summary, results)},
+    })
 
     if summary.get("run_error") and summary.get("total", 0) == 0:
         blocks.append({

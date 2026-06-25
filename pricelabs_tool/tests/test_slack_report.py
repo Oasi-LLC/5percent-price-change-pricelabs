@@ -2,6 +2,7 @@
 
 from pricelabs_tool.slack_report import (
     _aggregate_by_property,
+    _build_csr_followup_text,
     _format_property_line,
     format_slack_message,
 )
@@ -76,4 +77,28 @@ def test_format_slack_message_is_property_level_only():
     assert "*Property summary*" in block_text
     assert "Failed listings" not in block_text
     assert "FLOHOM 01" not in block_text
+    assert "*CSR follow-up" in block_text
+    assert "Multi-Calendar" in block_text
+    assert "all listings" in block_text
+    assert "Save and Refresh" in block_text
+    assert "Sync now" in block_text
     assert "text" in payload
+
+
+def test_csr_followup_lists_updated_properties():
+    results = [
+        {"id": "203812___364773", "status": "success", "dates_updated": 12},
+        {"id": "203812___362535", "status": "skipped"},
+    ]
+    summary = {"total": 2, "successful": 1, "failed": 0, "skipped": 1, "dates_updated": 12}
+    text = _build_csr_followup_text(True, summary, results)
+    assert "Onera" in text
+    assert "12 date(s)" in text
+    assert "Save and Refresh" in text
+
+
+def test_csr_followup_when_all_skipped():
+    results = [{"id": "203812___362535", "status": "skipped"}]
+    summary = {"total": 1, "successful": 0, "failed": 0, "skipped": 1, "dates_updated": 0}
+    text = _build_csr_followup_text(False, summary, results)
+    assert "No properties received new API updates" in text
