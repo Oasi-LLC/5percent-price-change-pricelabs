@@ -1,1 +1,1 @@
-{"version":1,"format":"sharded_v1","lock":{"run_id":"8b4a797f-6678-4dd6-9f5f-1523f9803f2e","direction":"decrease","started_at":"2026-06-27T12:01:41.305886Z","backend":"github:Oasi-LLC/5percent-price-change-pricelabs@automation-state:data/adjustment_runs/manifest.json"}}
+{"version":1,"format":"sharded_v1","lock":null}
