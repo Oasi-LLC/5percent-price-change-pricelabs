@@ -236,6 +236,47 @@ def test_github_store_large_file_raises_payload_error():
     assert "1 MB" in str(exc.value)
 
 
+def test_github_store_reads_large_shard_via_raw_api():
+    from pricelabs_tool.ledger_store import GitHubLedgerStore
+
+    shard_payload = {
+        "listing_id": "big",
+        "records": [{"key": "big|2026-06-01|increase|2026-06-29", "verified": True}],
+    }
+    raw_text = json.dumps(shard_payload)
+
+    metadata_response = MagicMock()
+    metadata_response.status_code = 200
+    metadata_response.text = json.dumps(
+        {
+            "content": "",
+            "sha": "bigsha",
+            "size": 1_500_000,
+        }
+    )
+    metadata_response.json.return_value = json.loads(metadata_response.text)
+
+    raw_response = MagicMock()
+    raw_response.status_code = 200
+    raw_response.text = raw_text
+    raw_response.raise_for_status = MagicMock()
+
+    def _mock_get(url, headers=None, params=None, timeout=None):
+        if headers and headers.get("Accept") == "application/vnd.github.raw+json":
+            return raw_response
+        return metadata_response
+
+    with patch("pricelabs_tool.ledger_store.requests.get", side_effect=_mock_get):
+        store = GitHubLedgerStore(
+            repo="Oasi-LLC/5percent-price-change-pricelabs",
+            token="test-token",
+        )
+        store._ref_ensured = True
+        records, shard_sha = store.read_listing_shard("big")
+        assert shard_sha == "bigsha"
+        assert records[0]["key"].startswith("big|")
+
+
 def test_github_store_empty_response_raises_ledger_response_error():
     empty_response = MagicMock()
     empty_response.status_code = 200

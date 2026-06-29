@@ -78,9 +78,9 @@ def _decode_github_file_content(data: Dict[str, Any], path: str) -> Any:
     if not content_b64:
         if size > GITHUB_CONTENTS_API_LIMIT_BYTES:
             raise LedgerPayloadError(
-                f"GitHub file '{path}' is {size:,} bytes; the Contents API cannot "
-                f"return files over {GITHUB_CONTENTS_API_LIMIT_BYTES // 1_000_000} MB. "
-                "Migrate to sharded ledger storage with migrate_ledger_shards.py."
+                f"GitHub file '{path}' is {size:,} bytes; the Contents API JSON "
+                f"response omits file bodies over "
+                f"{GITHUB_CONTENTS_API_LIMIT_BYTES // 1_000_000} MB."
             )
         raise LedgerPayloadError(
             f"GitHub file '{path}' has no readable content (reported size={size:,} bytes)."
@@ -201,10 +201,15 @@ class GitHubLedgerStore(LedgerStore):
     def backend_name(self) -> str:
         return f"github:{self.repo}@{self.ref}:{self.manifest_path}"
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers(self, *, raw: bool = False) -> Dict[str, str]:
+        accept = (
+            "application/vnd.github.raw+json"
+            if raw
+            else "application/vnd.github+json"
+        )
         return {
             "Authorization": f"Bearer {self.token}",
-            "Accept": "application/vnd.github+json",
+            "Accept": accept,
             "X-GitHub-Api-Version": "2022-11-28",
         }
 
@@ -275,7 +280,24 @@ class GitHubLedgerStore(LedgerStore):
             return None, None
         response.raise_for_status()
         data = _decode_github_json(response, f"read {path}")
-        return _decode_github_file_content(data, path), data.get("sha")
+        sha = data.get("sha")
+        size = int(data.get("size") or 0)
+        content_b64 = (data.get("content") or "").strip()
+        if not content_b64 and size > GITHUB_CONTENTS_API_LIMIT_BYTES:
+            raw_response = requests.get(
+                self._contents_url(path),
+                headers=self._headers(raw=True),
+                params={"ref": self.ref},
+                timeout=60,
+            )
+            raw_response.raise_for_status()
+            try:
+                return json.loads(raw_response.text), sha
+            except json.JSONDecodeError as e:
+                raise LedgerPayloadError(
+                    f"Could not parse JSON in GitHub file '{path}': {e}"
+                ) from e
+        return _decode_github_file_content(data, path), sha
 
     def _write_file(
         self,

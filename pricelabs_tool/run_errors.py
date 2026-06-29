@@ -29,9 +29,12 @@ def describe_run_failure(exc: BaseException) -> Dict[str, str]:
             "title": "GitHub ledger file cannot be read",
             "detail": str(exc),
             "action": (
-                "If the legacy ledger grew past GitHub's 1 MB API limit, run "
-                "`python3 migrate_ledger_shards.py /path/to/ledger.json --clear-lock` "
-                "locally with GITHUB_TOKEN set, then retry the automation."
+                "If the legacy monolithic ledger grew past GitHub's 1 MB API limit, "
+                "run `python3 migrate_ledger_shards.py /path/to/ledger.json "
+                "--clear-lock` locally with GITHUB_TOKEN set. If a single listing "
+                "shard is oversized, deploy the latest ledger_store (raw read "
+                "fallback) and retry; save will prune records back under 1 MB when "
+                "possible."
             ),
         }
 
