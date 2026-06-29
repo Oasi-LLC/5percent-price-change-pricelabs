@@ -7,18 +7,18 @@ properties:
     pms: cloudbeds
     total_units: 38
     listings:
-      - {name: "Cocoon", id: "203812___362535", batna: 189.00}
-      - {name: "Walnut House", id: "203812___364773", batna: 209.00}
-      - {name: "Spyglass", id: "203812___364776", batna: 209.00}
-      - {name: "Live Oak Lodge", id: "203812___364778", batna: 209.00}
-      - {name: "Lantana Dome", id: "203812___364779", batna: 189.00}
-      - {name: "Sage Safari", id: "203812___364780", batna: 189.00}
-      - {name: "Monarch", id: "203812___364781", batna: 209.00}
-      - {name: "Buckeye Bungalow", id: "203812___364782", batna: 189.00}
-      - {name: "Cedar Haus", id: "203812___490007", batna: 169.00}
-      - {name: "Juniper Haus", id: "203812___490024", batna: 169.00}
-      - {name: "Pecan Haus", id: "203812___528745", batna: 169.00}
-      - {name: "Bluebonnet", id: "203812___634080", batna: 189.00}
+      - {name: "Cocoon", id: "203812___362535", units: 1, batna: 189.00}
+      - {name: "Walnut House", id: "203812___364773", units: 1, batna: 209.00}
+      - {name: "Spyglass", id: "203812___364776", units: 1, batna: 209.00}
+      - {name: "Live Oak Lodge", id: "203812___364778", units: 1, batna: 209.00}
+      - {name: "Lantana Dome", id: "203812___364779", units: 1, batna: 189.00}
+      - {name: "Sage Safari", id: "203812___364780", units: 1, batna: 189.00}
+      - {name: "Monarch", id: "203812___364781", units: 1, batna: 209.00}
+      - {name: "Buckeye Bungalow", id: "203812___364782", units: 1, batna: 189.00}
+      - {name: "Cedar Haus", id: "203812___490007", units: 1, batna: 169.00}
+      - {name: "Juniper Haus", id: "203812___490024", units: 1, batna: 169.00}
+      - {name: "Pecan Haus", id: "203812___528745", units: 1, batna: 169.00}
+      - {name: "Bluebonnet", id: "203812___634080", units: 1, batna: 189.00}
       # Original fb2 listings
       - {name: "Great Lodge", id: "203812___643757", units: 1, batna: 1352}
       - {name: "Great Lodge: King Room", id: "203812___643775", units: 6, batna: 169.00}
@@ -49,9 +49,9 @@ properties:
     name: "Austin"
     pms: hostaway
     listings:
-      - {name: "Sunstrip", id: "320203", batna: 179.00}
-      - {name: "Malvern", id: "389561", batna: 600.00, batna_exempt_ranges: [{start: "2026-06-06", end: "2026-06-19"}, {start: "2026-07-03", end: "2026-07-20"}, {start: "2026-08-02", end: "2026-08-05"}, {start: "2026-10-16", end: "2026-10-26"}]}
-      - {name: "Malvern (Loft Only) ", id: "511788", batna: 159.00}
+      - {name: "Sunstrip", id: "320203", units: 1, batna: 179.00}
+      - {name: "Malvern", id: "389561", units: 1, batna: 600.00, batna_exempt_ranges: [{start: "2026-06-06", end: "2026-06-19"}, {start: "2026-07-03", end: "2026-07-20"}, {start: "2026-08-02", end: "2026-08-05"}, {start: "2026-10-16", end: "2026-10-26"}]}
+      - {name: "Malvern (Loft Only) ", id: "511788", units: 1, batna: 159.00}
 
   sos1:
     name: "Spirit of Sofia"
@@ -67,67 +67,67 @@ properties:
     name: "Spoon Mountain"
     pms: ownerrez
     listings:
-      - {name: "Chisum", id: "278915", batna: 189.00}
-      - {name: "Kingfisher", id: "303587", batna: 189.00}
-      - {name: "Shaka", id: "303588", batna: 189.00}
+      - {name: "Chisum", id: "278915", units: 1, batna: 189.00}
+      - {name: "Kingfisher", id: "303587", units: 1, batna: 189.00}
+      - {name: "Shaka", id: "303588", units: 1, batna: 189.00}
 
   flo1:
     name: "FLOHOM"
     pms: hostaway
     update_children: true   # Hostaway/FLOHOM: push to child listings so changes appear in PriceLabs
     listings:
-      - {name: "FLOHOM 1", id: "146908", batna: 275.00}
-      - {name: "FLOHOM 2", id: "146944", batna: 225.00}
-      - {name: "FLOHOM 3", id: "146946", batna: 125.00}
-      - {name: "FLOHOM 4", id: "260001", batna: 275.00}
-      - {name: "FLOHOM 5", id: "278502", batna: 200.00}
-      - {name: "FLOHOM 6", id: "345316", batna: 300.00}
-      - {name: "FLOHOM 7", id: "366176", batna: 250.00}
-      - {name: "FLOHOM 8", id: "376368", batna: 175.00}
-      - {name: "FLOHOM 9", id: "383097", batna: 200.00}
-      - {name: "FLOHOM 10", id: "404358", batna: 250.00}
-      - {name: "FLOHOM 11", id: "427313", batna: 125.00}
-      - {name: "FLOHOM 12", id: "422608", batna: 250.00}
-      - {name: "FLOHOM 13", id: "485833", batna: 315.00}
-      - {name: "FLOHOM 14", id: "407612", batna: 150.00}
-      - {name: "FLOHOM 15", id: "467334", batna: 275.00}
-      - {name: "FLOHOM 16", id: "510832", batna: 300.00}
-      - {name: "Flohom 17", id: "514132", batna: 300.00}
+      - {name: "FLOHOM 1", id: "146908", units: 1, batna: 275.00}
+      - {name: "FLOHOM 2", id: "146944", units: 1, batna: 225.00}
+      - {name: "FLOHOM 3", id: "146946", units: 1, batna: 125.00}
+      - {name: "FLOHOM 4", id: "260001", units: 1, batna: 275.00}
+      - {name: "FLOHOM 5", id: "278502", units: 1, batna: 200.00}
+      - {name: "FLOHOM 6", id: "345316", units: 1, batna: 300.00}
+      - {name: "FLOHOM 7", id: "366176", units: 1, batna: 250.00}
+      - {name: "FLOHOM 8", id: "376368", units: 1, batna: 175.00}
+      - {name: "FLOHOM 9", id: "383097", units: 1, batna: 200.00}
+      - {name: "FLOHOM 10", id: "404358", units: 1, batna: 250.00}
+      - {name: "FLOHOM 11", id: "427313", units: 1, batna: 125.00}
+      - {name: "FLOHOM 12", id: "422608", units: 1, batna: 250.00}
+      - {name: "FLOHOM 13", id: "485833", units: 1, batna: 315.00}
+      - {name: "FLOHOM 14", id: "407612", units: 1, batna: 150.00}
+      - {name: "FLOHOM 15", id: "467334", units: 1, batna: 275.00}
+      - {name: "FLOHOM 16", id: "510832", units: 1, batna: 300.00}
+      - {name: "Flohom 17", id: "514132", units: 1, batna: 300.00}
 
   lafavezion:
     name: "Lafave Zion"
     pms: resnexus
     listings:
-      - {name: "LaFave: Luxury Rentals at Zion--(3BR/2BA) Johnson Mountain Villa", id: "4140___8114"}
-      - {name: "LaFave: Luxury Rentals at Zion--(6BR/4BA) The Gallery House", id: "4140___8115"}
-      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) Temple of Sinawava", id: "4140___8117"}
-      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) The Sentinel", id: "4140___8118"}
-      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) The Sundial", id: "4140___8119"}
-      - {name: "LaFave: Luxury Rentals at Zion--Suite SMALL (1BR/1BA) The Watchman", id: "4140___8120"}
-      - {name: "LaFave: Luxury Rentals at Zion--Suite SMALL (1BR/1BA) The Zion", id: "4140___8121"}
-      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Emerald Pools", id: "4140___8122"}
-      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) The Subway", id: "4140___8123"}
-      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Meridian Tower", id: "4140___8124"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Checkerboard Mesa", id: "4140___8125"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Echo Canyon", id: "4140___8126"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Mountain of the Sun", id: "4140___8127"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Mystery Falls", id: "4140___8128"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Big Springs", id: "4140___8129"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) East Temple", id: "4140___8130"}
-      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Lava Point", id: "4140___8131"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Phantom Valley", id: "4140___8132"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Pine Creek", id: "4140___8133"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Hidden Canyon", id: "4140___8134"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Kolob Arch", id: "4140___8135"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Northgate Peaks", id: "4140___8136"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Orderville Canyon", id: "4140___8137"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Kayenta", id: "4140___8138"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Mount Kinesava", id: "4140___8139"}
-      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Weeping Rock", id: "4140___8140"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Angels Landing", id: "4140___8141"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) The Narrows", id: "4140___8142"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Cathedral Mountain", id: "4140___8143"}
-      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Virgin River", id: "4140___8144"}
+      - {name: "LaFave: Luxury Rentals at Zion--(3BR/2BA) Johnson Mountain Villa", id: "4140___8114", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--(6BR/4BA) The Gallery House", id: "4140___8115", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) Temple of Sinawava", id: "4140___8117", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) The Sentinel", id: "4140___8118", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite BIG (1BR/1BA) The Sundial", id: "4140___8119", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite SMALL (1BR/1BA) The Watchman", id: "4140___8120", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Suite SMALL (1BR/1BA) The Zion", id: "4140___8121", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Emerald Pools", id: "4140___8122", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) The Subway", id: "4140___8123", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Meridian Tower", id: "4140___8124", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Checkerboard Mesa", id: "4140___8125", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Echo Canyon", id: "4140___8126", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Mountain of the Sun", id: "4140___8127", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Mystery Falls", id: "4140___8128", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Big Springs", id: "4140___8129", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) East Temple", id: "4140___8130", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Villa Game (2BR/2BA) Lava Point", id: "4140___8131", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Phantom Valley", id: "4140___8132", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premium Villa (2BR/2BA) Pine Creek", id: "4140___8133", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Hidden Canyon", id: "4140___8134", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Kolob Arch", id: "4140___8135", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Northgate Peaks", id: "4140___8136", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Orderville Canyon", id: "4140___8137", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Kayenta", id: "4140___8138", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Mount Kinesava", id: "4140___8139", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Deluxe Villa (2BR/1BA) Weeping Rock", id: "4140___8140", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Angels Landing", id: "4140___8141", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) The Narrows", id: "4140___8142", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Cathedral Mountain", id: "4140___8143", units: 1}
+      - {name: "LaFave: Luxury Rentals at Zion--Premier Villa (3BR/3BA) Virgin River", id: "4140___8144", units: 1}
 
   blueridge:
     name: "Blue Ridge"
@@ -142,6 +142,6 @@ properties:
     pms: guesty
     update_children: true
     listings:
-      - {name: "Maya -- Maya Hotel Retreat", id: "6901008185d27c0022d3ba14", batna: 549.00, batna_weekday: 549.00, batna_weekend: 800.00}
-      - {name: "Mod -- The Mod Hotel", id: "6901037df868fc002a10e0d7", batna: 449.00, batna_weekday: 449.00, batna_weekend: 700.00}
+      - {name: "Maya -- Maya Hotel Retreat", id: "6901008185d27c0022d3ba14", units: 1, batna: 549.00, batna_weekday: 549.00, batna_weekend: 800.00}
+      - {name: "Mod -- The Mod Hotel", id: "6901037df868fc002a10e0d7", units: 1, batna: 449.00, batna_weekday: 449.00, batna_weekend: 700.00}
       # - {name: "M&M -- Maya & Mod Double Buyout", id: "6901051a7cc21d0029679ae6", batna: 976.00, batna_weekday: 976.00, batna_weekend: 1500.00}

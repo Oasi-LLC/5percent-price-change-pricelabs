@@ -8,8 +8,12 @@ from pricelabs_tool.batna import (
     batna_floor_for_date,
     calculate_adjusted_price,
 )
-from pricelabs_tool.bookings import is_booked_status
-from pricelabs_tool.property_config import is_date_in_valid_range, listing_to_property
+from pricelabs_tool.bookings import should_skip_booked_date
+from pricelabs_tool.property_config import (
+    is_date_in_valid_range,
+    listing_to_property,
+    listing_units,
+)
 
 
 def _day_label(date_str: str) -> str:
@@ -25,13 +29,14 @@ def compute_listing_adjustments(
     prop_config: Dict,
     increase: bool,
     adjustment_percentage: float = 5,
-    booking_by_date: Optional[Dict[str, str]] = None,
+    booking_by_date: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Build override payloads and preview rows for one listing.
     Does not call the PriceLabs API.
     """
     listing_id = str(listing.get("id"))
+    total_units = listing_units(listing_id, prop_config)
     adjusted_overrides: List[Dict] = []
     preview_rows: List[Dict[str, Any]] = []
     skipped = {"not_fixed": 0, "date_range": 0, "bad_price": 0, "booked": 0}
@@ -49,11 +54,24 @@ def compute_listing_adjustments(
         if old_price <= 0:
             skipped["bad_price"] += 1
             continue
-        if booking_by_date is not None and is_booked_status(
-            booking_by_date.get(override_date)
-        ):
-            skipped["booked"] += 1
-            continue
+        if booking_by_date is not None:
+            booking_info = booking_by_date.get(override_date)
+            if isinstance(booking_info, dict):
+                booking_status = booking_info.get("booking_status")
+                available = booking_info.get("available")
+                multi_unit_occupancy = booking_info.get("multi_unit_occupancy")
+            else:
+                booking_status = booking_info
+                available = None
+                multi_unit_occupancy = None
+            if should_skip_booked_date(
+                booking_status,
+                total_units=total_units,
+                available=available,
+                multi_unit_occupancy=multi_unit_occupancy,
+            ):
+                skipped["booked"] += 1
+                continue
 
         floor = batna_floor_for_date(listing_id, override_date, prop_config)
         adjusted_raw = calculate_adjusted_price(

@@ -33,5 +33,5 @@ def test_booking_status_batch_continues_when_one_listing_errors():
     result = client.get_booking_status_by_listing(listings)
 
     assert result["467334"] == {}
-    assert result["4140___8114"]["2026-07-01"] == "Booked"
-    assert result["4140___8114"]["2026-07-02"] == ""
+    assert result["4140___8114"]["2026-07-01"]["booking_status"] == "Booked"
+    assert result["4140___8114"]["2026-07-02"]["booking_status"] == ""

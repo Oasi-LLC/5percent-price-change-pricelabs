@@ -29,6 +29,22 @@ def listing_to_property(listing_id: str, config: Dict) -> Tuple[str, str]:
     return "zz_Other", "Other"
 
 
+def listing_units(listing_id: str, config: Dict) -> int:
+    """Return configured unit count for a listing (defaults to 1)."""
+    lid = str(listing_id)
+    for prop_data in config.values():
+        if not isinstance(prop_data, dict):
+            continue
+        for entry in prop_data.get("listings", []):
+            if str(entry.get("id")) == lid:
+                units = entry.get("units", 1)
+                try:
+                    return max(1, int(units))
+                except (TypeError, ValueError):
+                    return 1
+    return 1
+
+
 def is_date_in_valid_range(date_str: str) -> bool:
     try:
         d = datetime.strptime(date_str, "%Y-%m-%d").date()

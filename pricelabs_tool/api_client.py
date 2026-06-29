@@ -10,7 +10,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-from pricelabs_tool.bookings import booking_status_by_date_from_rows
+from pricelabs_tool.bookings import booking_info_by_date_from_rows
 
 
 class PriceLabsAPI:
@@ -56,15 +56,15 @@ class PriceLabsAPI:
 
     def get_booking_status_by_listing(
         self, listings: List[Dict]
-    ) -> Dict[str, Dict[str, str]]:
+    ) -> Dict[str, Dict[str, Dict]]:
         """
-        Fetch booking_status per date via POST /listing_prices.
+        Fetch booking info per date via POST /listing_prices.
 
         Args:
             listings: [{"id": "...", "pms": "..."}, ...]
 
         Returns:
-            {listing_id: {date: booking_status, ...}, ...}
+            {listing_id: {date: {booking_status, available?}, ...}, ...}
         """
         payload_listings = [
             {"id": str(item["id"]), "pms": item["pms"]}
@@ -85,7 +85,7 @@ class PriceLabsAPI:
             logger.error("Error fetching listing prices for booking status: %s", e)
             raise PriceLabsAPIError(f"Error fetching listing prices: {e}")
 
-        by_listing: Dict[str, Dict[str, str]] = {}
+        by_listing: Dict[str, Dict[str, Dict]] = {}
         requested_ids = {str(item["id"]) for item in payload_listings}
         for item in data if isinstance(data, list) else []:
             listing_id = str(item.get("id", ""))
@@ -100,7 +100,7 @@ class PriceLabsAPI:
                 )
                 by_listing[listing_id] = {}
                 continue
-            by_listing[listing_id] = booking_status_by_date_from_rows(
+            by_listing[listing_id] = booking_info_by_date_from_rows(
                 item.get("data", [])
             )
         for listing_id in requested_ids:
@@ -109,8 +109,8 @@ class PriceLabsAPI:
 
     def get_booking_status_for_listing(
         self, listing_id: str, pms: str
-    ) -> Dict[str, str]:
-        """Fetch booking_status per date for a single listing."""
+    ) -> Dict[str, Dict]:
+        """Fetch booking info per date for a single listing."""
         result = self.get_booking_status_by_listing([{"id": listing_id, "pms": pms}])
         return result.get(str(listing_id), {})
 

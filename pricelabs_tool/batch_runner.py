@@ -95,7 +95,7 @@ def _process_listing(
     adjustment_percentage: float,
     run_day: str,
     ledger: AdjustmentLedger,
-    booking_by_date: Optional[Dict[str, str]] = None,
+    booking_by_date: Optional[Dict] = None,
 ) -> Dict:
     """Fetch, idempotency-filter, apply once, verify, and record one listing."""
     api_client = PriceLabsAPI()
