@@ -135,15 +135,6 @@ def _process_listing(
         ledger,
     )
 
-    if idem_stats["blocked"] > 0:
-        return {
-            "id": listing_id,
-            "name": listing["name"],
-            "status": "error",
-            "message": "; ".join(idem_stats["block_messages"]),
-            "double_adjustment_blocked": True,
-        }
-
     if not to_apply:
         already = idem_stats["skip_already_done"]
         no_change = idem_stats["skip_no_change"]
@@ -379,7 +370,6 @@ def summarize_results(results: List[Dict]) -> Dict:
     batna_clamped = sum(r.get("batna_clamped_count", 0) for r in successful)
     already_adjusted = sum(r.get("already_adjusted_count", 0) for r in results)
     skipped_booked = sum(r.get("skipped_booked", 0) for r in results)
-    double_blocked = [r for r in failed if r.get("double_adjustment_blocked")]
     verification_failed = [r for r in failed if r.get("verification_failed")]
     return {
         "total": len(results),
@@ -391,7 +381,6 @@ def summarize_results(results: List[Dict]) -> Dict:
         "batna_clamped": batna_clamped,
         "already_adjusted": already_adjusted,
         "skipped_booked": skipped_booked,
-        "double_adjustment_blocked": len(double_blocked),
         "verification_failed": len(verification_failed),
         "successful_listings": successful,
         "failed_listings": failed,

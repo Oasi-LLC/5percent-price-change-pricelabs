@@ -247,9 +247,7 @@ if listings:
                     st.warning(f"⏭️ {result['name']}: {result.get('message', 'Skipped')}")
                 else:
                     prefix = ""
-                    if result.get("double_adjustment_blocked"):
-                        prefix = "🚫 Double adjustment blocked: "
-                    elif result.get("verification_failed"):
+                    if result.get("verification_failed"):
                         prefix = "⚠️ Verification failed: "
                     st.error(f"❌ {result['name']}: {prefix}{result['message']}")
 

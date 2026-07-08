@@ -53,22 +53,22 @@ def test_skip_when_already_verified_today():
     assert "Already adjusted" in reason
 
 
-def test_block_double_increase():
+def test_reapply_increase_when_live_price_above_verified_target():
     ledger = _ledger_with_record("123", "2026-06-01", "increase", "2026-06-24", 100, 105)
     action, reason = evaluate_date_action(
         "123", "2026-06-01", True, 110, 115, "2026-06-24", ledger
     )
-    assert action == "block"
-    assert "Double adjustment" in reason
+    assert action == "apply"
+    assert reason is None
 
 
-def test_block_double_decrease():
+def test_reapply_decrease_when_live_price_below_verified_target():
     ledger = _ledger_with_record("123", "2026-06-01", "decrease", "2026-06-24", 200, 190)
     action, reason = evaluate_date_action(
         "123", "2026-06-01", False, 180, 171, "2026-06-24", ledger
     )
-    assert action == "block"
-    assert "Double adjustment" in reason
+    assert action == "apply"
+    assert reason is None
 
 
 def test_apply_when_no_prior_record():
@@ -93,7 +93,7 @@ def test_skip_when_price_already_at_target():
         assert "no change" in reason.lower()
 
 
-def test_filter_blocks_listing_with_double_adjustment():
+def test_filter_reapplies_when_live_price_changed_since_verified_run():
     with tempfile.TemporaryDirectory() as tmp:
         store = FileLedgerStore(path=Path(tmp) / "ledger.json")
         repo = LedgerRepository(store=store)
@@ -110,8 +110,9 @@ def test_filter_blocks_listing_with_double_adjustment():
         to_apply, stats = filter_adjustments_for_idempotency(
             "123", preview_rows, adjusted, True, "2026-06-24", ledger
         )
-        assert to_apply == []
-        assert stats["blocked"] == 1
+        assert len(to_apply) == 1
+        assert to_apply[0]["price"] == "115"
+        assert stats["apply_count"] == 1
 
 
 def test_evening_decrease_allowed_after_morning_increase():

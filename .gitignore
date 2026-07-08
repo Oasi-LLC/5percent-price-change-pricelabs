@@ -46,6 +46,7 @@ local_settings.py
 # Test coverage
 .coverage
 htmlcov/
+.pytest_cache/
 
 # Temporary files
 *.tmp

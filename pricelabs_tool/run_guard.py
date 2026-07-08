@@ -1,4 +1,4 @@
-"""Run lock and adjustment ledger to prevent double adjustments."""
+"""Run lock and adjustment ledger for idempotent price adjustments."""
 
 import logging
 from contextlib import contextmanager
@@ -18,10 +18,6 @@ LOCK_FILE = LEDGER_DIR / "run.lock"
 
 class AdjustmentRunInProgressError(Exception):
     """Raised when another adjustment run holds the lock."""
-
-
-class DoubleAdjustmentError(Exception):
-    """Raised when prices suggest a duplicate adjustment for the same direction."""
 
 
 def _direction_key(increase: bool) -> str:
@@ -79,10 +75,10 @@ def evaluate_date_action(
     ledger: AdjustmentLedger,
 ) -> Tuple[str, Optional[str]]:
     """
-    Decide whether to apply, skip, or block an adjustment for one date.
+    Decide whether to apply or skip an adjustment for one date.
 
     Returns:
-        (action, reason) where action is "apply", "skip", or "block"
+        (action, reason) where action is "apply" or "skip"
     """
     direction = _direction_key(increase)
     current = int(price_before)
@@ -92,16 +88,6 @@ def evaluate_date_action(
         expected_after = int(record["price_after"])
         if current == expected_after:
             return "skip", "Already adjusted and verified today for this direction"
-        if increase and current > expected_after:
-            return "block", (
-                f"Double adjustment suspected on {override_date}: "
-                f"current ${current} exceeds verified target ${expected_after}"
-            )
-        if not increase and current < expected_after:
-            return "block", (
-                f"Double adjustment suspected on {override_date}: "
-                f"current ${current} below verified target ${expected_after}"
-            )
         logger.warning(
             "listing=%s date=%s price changed since verified run (was %s, now %s); re-applying",
             listing_id,
@@ -128,15 +114,13 @@ def filter_adjustments_for_idempotency(
     Filter overrides to apply based on ledger and current prices.
 
     Returns:
-        (overrides_to_apply, stats dict with apply/skip/block counts and block messages)
+        (overrides_to_apply, stats dict with apply/skip counts)
     """
     preview_by_date = {row["date"]: row for row in preview_rows}
     stats = {
         "apply_count": 0,
         "skip_already_done": 0,
         "skip_no_change": 0,
-        "blocked": 0,
-        "block_messages": [],
     }
     to_apply: List[Dict] = []
 
@@ -164,9 +148,6 @@ def filter_adjustments_for_idempotency(
                 stats["skip_already_done"] += 1
             else:
                 stats["skip_no_change"] += 1
-        elif action == "block":
-            stats["blocked"] += 1
-            stats["block_messages"].append(reason or "Blocked")
 
     return to_apply, stats
 

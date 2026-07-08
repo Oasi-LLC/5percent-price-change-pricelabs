@@ -195,8 +195,6 @@ def check_dry_run_preview(direction: str, sample_limit: int = 8) -> CheckResult:
                     skipped_booked += computed["skipped"].get("booked", 0)
                     would_apply += len(to_apply)
                     would_skip += stats["skip_already_done"] + stats["skip_no_change"]
-                    if stats["blocked"]:
-                        errors += stats["blocked"]
 
                     if len(sample_lines) < 5 and computed["preview_rows"]:
                         row = computed["preview_rows"][0]
@@ -221,8 +219,6 @@ def check_dry_run_preview(direction: str, sample_limit: int = 8) -> CheckResult:
             f"{would_skip} would skip (idempotency/no-op), "
             f"{skipped_booked} booked dates excluded"
         )
-        if errors:
-            detail += f", {errors} blocked/errors"
         if sample_lines:
             detail += "\n  Samples:\n  - " + "\n  - ".join(sample_lines)
         return CheckResult(f"Dry-run preview ({direction})", errors == 0, detail)

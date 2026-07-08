@@ -33,7 +33,6 @@ def _aggregate_by_property(results: List[Dict]) -> List[Dict]:
                 "failed": 0,
                 "skipped": 0,
                 "dates_updated": 0,
-                "double_blocked": 0,
                 "verification_failed": 0,
             }
         stats = by_key[prop_key]
@@ -44,8 +43,6 @@ def _aggregate_by_property(results: List[Dict]) -> List[Dict]:
             stats["dates_updated"] += int(result.get("dates_updated", 0) or 0)
         elif status == "error":
             stats["failed"] += 1
-            if result.get("double_adjustment_blocked"):
-                stats["double_blocked"] += 1
             if result.get("verification_failed"):
                 stats["verification_failed"] += 1
         elif status == "skipped":
@@ -80,9 +77,7 @@ def _format_property_line(stats: Dict) -> str:
         f"{updated_part} · {skipped} skipped · {failed} failed"
     )
     if failed:
-        if stats["double_blocked"]:
-            line += " _(double adjustment)_"
-        elif stats["verification_failed"]:
+        if stats["verification_failed"]:
             line += " _(verify failed)_"
     return line
 
@@ -164,9 +159,7 @@ def _build_csr_followup_text(
         )
         for row in failed_props:
             note = ""
-            if row["double_blocked"]:
-                note = " (double adjustment)"
-            elif row["verification_failed"]:
+            if row["verification_failed"]:
                 note = " (verify failed)"
             lines.append(
                 f"• *{row['prop_name']}* — {row['failed']} listing(s) failed{note}"
@@ -181,8 +174,6 @@ def _build_csr_followup_text(
 def _status_emoji(summary: Dict) -> str:
     if summary.get("run_error"):
         return ":warning:"
-    if summary.get("double_adjustment_blocked", 0) > 0:
-        return ":rotating_light:"
     if summary["failed"] > 0:
         return ":x:"
     if summary["successful"] == 0 and summary["skipped"] == summary["total"]:
@@ -220,11 +211,6 @@ def format_slack_message(
         overview += f"\n*Skipped (booked dates):* {summary['skipped_booked']} date(s)"
     if summary.get("already_adjusted"):
         overview += f"\n*Skipped (already at target):* {summary['already_adjusted']} date(s)"
-    if summary.get("double_adjustment_blocked"):
-        overview += (
-            f"\n:rotating_light: *Double-adjustment blocked:* "
-            f"{summary['double_adjustment_blocked']} listing(s)"
-        )
     if summary.get("verification_failed"):
         overview += (
             f"\n:x: *Verification failed:* {summary['verification_failed']} listing(s)"
