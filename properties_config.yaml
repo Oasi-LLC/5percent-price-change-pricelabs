@@ -13,7 +13,7 @@ properties:
       - {name: "Live Oak Lodge", id: "203812___364778", units: 1, batna: 209.00}
       - {name: "Lantana Dome", id: "203812___364779", units: 1, batna: 189.00}
       - {name: "Sage Safari", id: "203812___364780", units: 1, batna: 189.00}
-      - {name: "Monarch", id: "203812___364781", units: 1, batna: 209.00}
+      - {name: "Monarch", id: "203812___364781", units: 1, batna: 379}
       - {name: "Buckeye Bungalow", id: "203812___364782", units: 1, batna: 189.00}
       - {name: "Cedar Haus", id: "203812___490007", units: 1, batna: 169.00}
       - {name: "Juniper Haus", id: "203812___490024", units: 1, batna: 169.00}
@@ -27,7 +27,7 @@ properties:
       - {name: "Cypress Lodge | Sleeps 4", id: "203812___643762", units: 2, batna: 289.00}
       - {name: "Cypress Lodge | Sleeps 6", id: "203812___655827", units: 2, batna: 394.00}
       - {name: "Diamond", id: "203812___643771", units: 3, batna: 229.00}
-      - {name: "Monolith", id: "203812___643773", units: 2, batna: 229.00}
+      - {name: "Monolith", id: "203812___643773", units: 2, batna: 379}
       - {name: "Post Oak", id: "203812___643760", units: 1, batna: 169.00}
       - {name: "Quonset", id: "203812___643764", units: 2, batna: 209.00}
       - {name: "Spiral", id: "203812___643772", units: 1, batna: 209.00}
