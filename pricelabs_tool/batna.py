@@ -71,7 +71,7 @@ def batna_floor_for_date(
     """
     Resolve BATNA floor for one override date.
     batna_exempt_ranges: no floor for those dates (5% only).
-    SOS/Maya: batna_weekday (Sun-Thu) / batna_weekend (Fri-Sat).
+    Weekday/weekend: batna_weekday (Sun-Thu) / batna_weekend (Fri-Sat).
     Others: flat batna.
     """
     entry, prop_data = get_listing_config_entry(listing_id, prop_config)

@@ -76,7 +76,7 @@ def test_malvern_exempt_date_no_batna_clamp():
     assert clamped is False
 
 
-def test_batna_floor_for_date_lafave_no_batna():
+def test_batna_floor_for_date_unknown_listing():
     config = _load_prop_config()
     assert batna_floor_for_date("4140___8117", "2026-04-01", config) is None
 
@@ -88,19 +88,19 @@ def test_is_weekend_day():
     assert is_weekend_day(0) is False  # Monday
 
 
-def test_sos_weekday_weekend_batna():
+def test_blueridge_weekday_weekend_batna():
     config = _load_prop_config()
-    listing_id = "68642480da9649000fc63fc5"  # 12BR, weekday 750 weekend 1000
-    assert batna_floor_for_date(listing_id, "2026-05-21", config) == 750.0  # Thu
-    assert batna_floor_for_date(listing_id, "2026-05-22", config) == 1000.0  # Fri
-    assert batna_floor_for_date(listing_id, "2026-05-24", config) == 750.0  # Sun
-    assert batna_floor_for_date(listing_id, "2026-05-23", config) == 1000.0  # Sat
+    listing_id = "3527b9f8-e4db-4220-8f47-f41ecda4d983"  # Little Luxe, weekday 200 weekend 300
+    assert batna_floor_for_date(listing_id, "2026-05-21", config) == 200.0  # Thu
+    assert batna_floor_for_date(listing_id, "2026-05-22", config) == 300.0  # Fri
+    assert batna_floor_for_date(listing_id, "2026-05-24", config) == 200.0  # Sun
+    assert batna_floor_for_date(listing_id, "2026-05-23", config) == 300.0  # Sat
 
 
-def test_sos_weekend_clamp_on_decrease():
+def test_blueridge_weekend_clamp_on_decrease():
     config = _load_prop_config()
-    listing_id = "686424c7c8d43b001321df29"  # 11BR weekend 900
+    listing_id = "0dfcb2d6-226c-4a4a-a6eb-378ef134cd94"  # A-Frame weekend 800
     floor = batna_floor_for_date(listing_id, "2026-05-23", config)  # Saturday
-    final, clamped = apply_adjustment_with_batna(850, increase=False, batna_floor=floor)
-    assert final == 900
+    final, clamped = apply_adjustment_with_batna(750, increase=False, batna_floor=floor)
+    assert final == 800
     assert clamped is True
