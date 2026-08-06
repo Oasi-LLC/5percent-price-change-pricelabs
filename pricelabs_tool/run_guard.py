@@ -46,6 +46,16 @@ class AdjustmentLedger:
     def get_anchor(self, listing_id: str, override_date: str) -> Optional[Dict]:
         return self._repo.get_anchor(listing_id, override_date)
 
+    def iter_verified_records(
+        self,
+        run_day: str,
+        direction: Optional[str] = None,
+        listing_ids: Optional[List[str]] = None,
+    ) -> List[Dict]:
+        return self._repo.iter_verified_records(
+            run_day, direction=direction, listing_ids=listing_ids
+        )
+
     def set_anchor(
         self,
         listing_id: str,

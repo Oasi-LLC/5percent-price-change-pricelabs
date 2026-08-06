@@ -29,6 +29,9 @@ logs/
 # Adjustment run ledger and locks (local idempotency state)
 data/adjustment_runs/
 
+# Local rate snapshots for before/after diffs
+data/rate_snapshots/
+
 # IDE specific files
 .idea/
 .vscode/

@@ -543,6 +543,34 @@ class LedgerRepository:
         key = f"{listing_id}|{override_date}|anchor"
         return self._records.get(key)
 
+    def load_listing(self, listing_id: str) -> None:
+        """Ensure shard/file records for a listing are in memory."""
+        self._load_listing_records(listing_id)
+
+    def iter_verified_records(
+        self,
+        run_day: str,
+        direction: Optional[str] = None,
+        listing_ids: Optional[List[str]] = None,
+    ) -> List[Dict]:
+        """Return verified adjustment rows for a run day (excludes anchors)."""
+        if listing_ids:
+            for listing_id in listing_ids:
+                self._load_listing_records(listing_id)
+        rows: List[Dict] = []
+        for item in self._records.values():
+            if item.get("record_type") == "anchor":
+                continue
+            if not item.get("verified"):
+                continue
+            if item.get("run_day") != run_day:
+                continue
+            item_dir = item.get("direction")
+            if direction and item_dir != direction:
+                continue
+            rows.append(item)
+        return rows
+
     def set_anchor(
         self,
         listing_id: str,
