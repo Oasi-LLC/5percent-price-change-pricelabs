@@ -98,6 +98,9 @@ def prune_records(records: List[Dict]) -> List[Dict]:
     cutoff = date.today() - timedelta(days=LEDGER_RETENTION_DAYS)
     kept = []
     for item in records:
+        if item.get("record_type") == "anchor":
+            kept.append(item)
+            continue
         run_day = item.get("run_day", "")
         try:
             if datetime.strptime(run_day, "%Y-%m-%d").date() >= cutoff:
@@ -534,6 +537,32 @@ class LedgerRepository:
         self._load_listing_records(listing_id)
         key = f"{listing_id}|{override_date}|{direction}|{run_day}"
         return self._records.get(key)
+
+    def get_anchor(self, listing_id: str, override_date: str) -> Optional[Dict]:
+        self._load_listing_records(listing_id)
+        key = f"{listing_id}|{override_date}|anchor"
+        return self._records.get(key)
+
+    def set_anchor(
+        self,
+        listing_id: str,
+        override_date: str,
+        reference_price: int,
+        state: str,
+    ) -> None:
+        key = f"{listing_id}|{override_date}|anchor"
+        self._records[key] = {
+            "key": key,
+            "record_type": "anchor",
+            "listing_id": listing_id,
+            "date": override_date,
+            "reference_price": int(reference_price),
+            "state": state,
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }
+        if self._is_sharded:
+            self._loaded_listings.add(listing_id)
+            self._dirty_listings.add(listing_id)
 
     def record_verified(
         self,

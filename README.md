@@ -1,6 +1,6 @@
 # PriceLabs 5% Price Adjustment Tool
 
-Streamlit app to apply ±5% fixed-override adjustments across configured listings, with **BATNA minimum floors** (flat or weekday/weekend for Blue Ridge).
+Streamlit app to apply ±5% fixed-override adjustments across configured listings, with **BATNA minimum floors** (Mon–Wed base; Thu/Sun +15%; Fri/Sat +15% over Thu/Sun).
 
 ## Setup
 
@@ -32,7 +32,7 @@ streamlit run streamlit_app.py
 
 ## Configuration
 
-- `properties_config.yaml` — listing IDs, BATNA values, Blue Ridge weekday-weekend floors.
+- `properties_config.yaml` — listing IDs and Mon–Wed BATNA base values (Thu/Sun and Fri/Sat tiers computed automatically; Blue Ridge uses explicit weekday/weekend floors).
 
 ## Project layout
 

@@ -3,17 +3,15 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pricelabs_tool.batna import (
-    apply_adjustment_with_batna,
-    batna_floor_for_date,
-    calculate_adjusted_price,
-)
+from pricelabs_tool.batna import batna_floor_for_date
 from pricelabs_tool.bookings import should_skip_booked_date
 from pricelabs_tool.property_config import (
     is_date_in_valid_range,
     listing_to_property,
     listing_units,
 )
+from pricelabs_tool.reference_price import resolve_adjustment_for_date
+from pricelabs_tool.run_guard import AdjustmentLedger
 
 
 def _day_label(date_str: str) -> str:
@@ -30,6 +28,7 @@ def compute_listing_adjustments(
     increase: bool,
     adjustment_percentage: float = 5,
     booking_by_date: Optional[Dict[str, Any]] = None,
+    ledger: Optional[AdjustmentLedger] = None,
 ) -> Dict[str, Any]:
     """
     Build override payloads and preview rows for one listing.
@@ -74,15 +73,23 @@ def compute_listing_adjustments(
                 continue
 
         floor = batna_floor_for_date(listing_id, override_date, prop_config)
-        adjusted_raw = calculate_adjusted_price(
-            old_price, increase=increase, adjustment_percentage=adjustment_percentage
-        )
-        new_price, clamped = apply_adjustment_with_batna(
-            old_price,
+        live_price = int(old_price)
+        stored_reference = None
+        if ledger is not None:
+            anchor = ledger.get_anchor(listing_id, override_date)
+            if anchor is not None:
+                stored_reference = anchor.get("reference_price")
+
+        resolved = resolve_adjustment_for_date(
+            live_price,
+            stored_reference,
             increase=increase,
             batna_floor=floor,
             adjustment_percentage=adjustment_percentage,
         )
+        new_price = resolved["new_price"]
+        clamped = resolved["clamped"]
+
         if clamped:
             batna_clamped_count += 1
 
@@ -91,10 +98,16 @@ def compute_listing_adjustments(
                 "date": override_date,
                 "day": _day_label(override_date),
                 "old_price": old_price,
-                "adjusted_5pct": int(adjusted_raw),
+                "reference_price": resolved["reference_price"],
+                "inferred_state": resolved["inferred_state"],
+                "reference_refreshed": resolved["reference_refreshed"],
+                "decreased_target": resolved["decreased_target"],
+                "increased_target": resolved["increased_target"],
+                "adjustment_action": resolved["action"],
                 "batna_floor": floor,
                 "new_price": new_price,
                 "clamped": clamped,
+                "state_after_apply": resolved["state_after_apply"],
             }
         )
         adjusted_overrides.append(

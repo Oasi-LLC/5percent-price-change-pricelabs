@@ -43,6 +43,18 @@ class AdjustmentLedger:
     ) -> Optional[Dict]:
         return self._repo.get_record(listing_id, override_date, direction, run_day)
 
+    def get_anchor(self, listing_id: str, override_date: str) -> Optional[Dict]:
+        return self._repo.get_anchor(listing_id, override_date)
+
+    def set_anchor(
+        self,
+        listing_id: str,
+        override_date: str,
+        reference_price: int,
+        state: str,
+    ) -> None:
+        self._repo.set_anchor(listing_id, override_date, reference_price, state)
+
     def record_verified(
         self,
         listing_id: str,
@@ -84,17 +96,12 @@ def evaluate_date_action(
     current = int(price_before)
     record = ledger.get_record(listing_id, override_date, direction, run_day)
 
-    if record and record.get("verified"):
+    if record and record.get("verified") and record.get("run_day") == run_day:
         expected_after = int(record["price_after"])
         if current == expected_after:
             return "skip", "Already adjusted and verified today for this direction"
-        logger.warning(
-            "listing=%s date=%s price changed since verified run (was %s, now %s); re-applying",
-            listing_id,
-            override_date,
-            expected_after,
-            current,
-        )
+        if current != price_after:
+            return "apply", None
 
     if current == price_after:
         return "skip", "Price already at computed target (no change needed)"

@@ -18,9 +18,38 @@ def get_listing_config_entry(
     return None, None
 
 
+BATNA_TIER_STEP = 0.15  # Thu/Sun +15% over Mon-Wed; Fri/Sat +15% over Thu/Sun
+
+
 def is_weekend_day(weekday: int) -> bool:
     """True for Friday/Saturday (weekday: Mon=0 .. Sun=6). Sun-Thu use weekday BATNA."""
     return weekday in (4, 5)
+
+
+def batna_tier_multiplier(weekday: int) -> float:
+    """
+    Three-tier BATNA from Mon-Wed base (weekday: Mon=0 .. Sun=6).
+    Mon-Wed: 1.0 | Thu & Sun: 1.15 | Fri & Sat: 1.15^2
+    """
+    if weekday in (0, 1, 2):
+        return 1.0
+    if weekday in (3, 6):
+        return 1.0 + BATNA_TIER_STEP
+    if weekday in (4, 5):
+        return (1.0 + BATNA_TIER_STEP) ** 2
+    return 1.0
+
+
+def three_tier_batna_floor(base_batna: float, weekday: int) -> float:
+    """Compute day-of-week BATNA floor from Mon-Wed base rate."""
+    base = float(base_batna)
+    if weekday in (0, 1, 2):
+        return round(base)
+    if weekday in (3, 6):
+        return round(base * 115 / 100)
+    if weekday in (4, 5):
+        return round(base * 13225 / 10000)
+    return round(base)
 
 
 def _parse_date(date_str: str) -> Optional[date]:
@@ -61,7 +90,11 @@ def batna_floor_from_entry_for_date(entry: Dict, date_str: str, prop_data: Optio
         return float(weekday_batna)
 
     if entry.get("batna") is not None:
-        return float(entry["batna"])
+        try:
+            weekday = datetime.strptime(date_str, "%Y-%m-%d").weekday()
+        except (ValueError, TypeError):
+            return None
+        return float(three_tier_batna_floor(float(entry["batna"]), weekday))
     return None
 
 
@@ -71,8 +104,8 @@ def batna_floor_for_date(
     """
     Resolve BATNA floor for one override date.
     batna_exempt_ranges: no floor for those dates (5% only).
-    Weekday/weekend: batna_weekday (Sun-Thu) / batna_weekend (Fri-Sat).
-    Others: flat batna.
+    batna_weekday/batna_weekend: Sun-Thu / Fri-Sat (Blue Ridge).
+    batna only: Mon-Wed base; Thu/Sun +15%; Fri/Sat +15% over Thu/Sun.
     """
     entry, prop_data = get_listing_config_entry(listing_id, prop_config)
     if not entry:

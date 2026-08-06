@@ -110,6 +110,7 @@ def _process_listing(
         increase=increase,
         adjustment_percentage=adjustment_percentage,
         booking_by_date=booking_by_date,
+        ledger=ledger,
     )
     skipped = computed["skipped"]
     num_skipped = _skipped_count(skipped)
@@ -198,6 +199,12 @@ def _process_listing(
             run_day,
             int(row["old_price"]),
             int(override["price"]),
+        )
+        ledger.set_anchor(
+            listing_id,
+            override["date"],
+            int(row["reference_price"]),
+            row.get("state_after_apply", "neutral"),
         )
 
     return {
