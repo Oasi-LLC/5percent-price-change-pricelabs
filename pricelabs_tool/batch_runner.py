@@ -9,7 +9,11 @@ from pricelabs_tool.api_client import PriceLabsAPI
 from pricelabs_tool.property_config import (
     exclude_listings_not_in_config,
     extract_parent_listing_id,
+    listing_pms,
     load_property_config,
+    mirror_rates_from_listing_id,
+    mirror_targets_for_source,
+    partition_adjust_and_mirror_listings,
     split_children_of_selected_update_children_parents,
 )
 from pricelabs_tool.run_guard import (
@@ -222,7 +226,115 @@ def _process_listing(
         "skipped_date_range": skipped["date_range"],
         "skipped_bad_price": skipped["bad_price"],
         "skipped_booked": skipped.get("booked", 0),
+        "applied_overrides": to_apply,
     }
+
+
+def _mirror_rates_from_source(
+    source_listing_id: str,
+    applied_overrides: List[Dict],
+    prop_config: Dict,
+    api_client: PriceLabsAPI,
+) -> List[Dict]:
+    """Copy applied override prices from source listing to configured mirror targets."""
+    if not applied_overrides:
+        return []
+
+    targets = mirror_targets_for_source(source_listing_id, prop_config)
+    results: List[Dict] = []
+    for target in targets:
+        target_id = target["id"]
+        target_pms = target.get("pms") or listing_pms(target_id, prop_config)
+        try:
+            payload = api_client.get_listing_overrides(target_id, pms=target_pms)
+        except Exception as e:
+            results.append({
+                "id": target_id,
+                "name": target.get("name", target_id),
+                "status": "error",
+                "message": f"Mirror copy failed (could not pull target): {e}",
+                "mirrored_from": source_listing_id,
+            })
+            continue
+
+        existing = {
+            item.get("date"): item
+            for item in payload.get("overrides", [])
+            if item.get("date")
+        }
+        to_mirror: List[Dict] = []
+        for override in applied_overrides:
+            override_date = override["date"]
+            new_price = int(override["price"])
+            existing_row = existing.get(override_date)
+            if existing_row and int(float(existing_row.get("price", 0))) == new_price:
+                continue
+            to_mirror.append({
+                "date": override_date,
+                "price": str(new_price),
+                "price_type": "fixed",
+                "currency": (existing_row or override).get("currency", "USD"),
+                "min_stay": (existing_row or override).get("min_stay", 1),
+            })
+
+        if not to_mirror:
+            results.append({
+                "id": target_id,
+                "name": target.get("name", target_id),
+                "status": "skipped",
+                "message": (
+                    f"Mirror from {source_listing_id}: all {len(applied_overrides)} date(s) "
+                    "already match source prices"
+                ),
+                "mirrored_from": source_listing_id,
+                "already_adjusted_count": len(applied_overrides),
+            })
+            continue
+
+        try:
+            expected_by_date = {item["date"]: int(item["price"]) for item in to_mirror}
+            api_client.update_listing_overrides(
+                target_id, to_mirror, pms=target_pms, update_children=False
+            )
+            verified, mismatches = verify_listing_overrides(
+                api_client, target_id, expected_by_date, pms=target_pms
+            )
+        except Exception as e:
+            results.append({
+                "id": target_id,
+                "name": target.get("name", target_id),
+                "status": "error",
+                "message": f"Mirror copy push failed: {e}",
+                "mirrored_from": source_listing_id,
+            })
+            continue
+
+        if not verified:
+            results.append({
+                "id": target_id,
+                "name": target.get("name", target_id),
+                "status": "error",
+                "message": (
+                    "Mirror copy verification failed: "
+                    + _format_verification_errors(mismatches)
+                ),
+                "mirrored_from": source_listing_id,
+                "verification_failed": True,
+            })
+            continue
+
+        results.append({
+            "id": target_id,
+            "name": target.get("name", target_id),
+            "status": "success",
+            "message": (
+                f"Mirrored {len(to_mirror)} date(s) from source {source_listing_id}"
+            ),
+            "mirrored_from": source_listing_id,
+            "dates_updated": len(to_mirror),
+            "dates_verified": len(to_mirror),
+        })
+    return results
 
 
 def batch_update(
@@ -278,6 +390,9 @@ def _batch_update_inner(
     listings, auto_skipped_children = split_children_of_selected_update_children_parents(
         listings, prop_config
     )
+    listings, mirror_only_selected = partition_adjust_and_mirror_listings(
+        listings, prop_config
+    )
     for child in auto_skipped_children:
         parent_id = extract_parent_listing_id(child)
         msg = "Auto-skipped child listing: selected parent has update_children=true"
@@ -288,6 +403,18 @@ def _batch_update_inner(
             "name": child.get("name", str(child.get("id"))),
             "status": "skipped",
             "message": msg,
+        })
+
+    for mirror_listing in mirror_only_selected:
+        source_id = mirror_rates_from_listing_id(str(mirror_listing.get("id")), prop_config)
+        results.append({
+            "id": mirror_listing["id"],
+            "name": mirror_listing.get("name", str(mirror_listing.get("id"))),
+            "status": "skipped",
+            "message": (
+                f"Mirror-only listing: rates copy from source {source_id} when that "
+                "listing is adjusted (not ±5% adjusted independently)"
+            ),
         })
 
     total = len(listings)
@@ -333,6 +460,16 @@ def _batch_update_inner(
                         booking_by_date=booking_by_date,
                     )
                     results.append(result)
+                    if result.get("status") == "success":
+                        applied = result.get("applied_overrides") or []
+                        if applied:
+                            mirror_results = _mirror_rates_from_source(
+                                str(listing["id"]),
+                                applied,
+                                prop_config,
+                                api_client,
+                            )
+                            results.extend(mirror_results)
                     last_error = None
                     break
                 except Exception as e:

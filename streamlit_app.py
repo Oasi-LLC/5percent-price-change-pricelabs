@@ -15,6 +15,7 @@ from pricelabs_tool.property_config import (
     exclude_listings_not_in_config,
     load_property_config,
     listing_to_property,
+    mirror_rates_from_listing_id,
     sort_listings_by_property,
 )
 
@@ -160,8 +161,12 @@ if listings:
             st.markdown(f"**{prop_display_name}**")
             for listing in group:
                 cb_key = "cb_" + str(listing["id"])
+                label = listing.get("name", listing["id"])
+                source_id = mirror_rates_from_listing_id(str(listing["id"]), prop_config)
+                if source_id:
+                    label += f" (mirrors {source_id})"
                 st.checkbox(
-                    listing.get("name", listing["id"]),
+                    label,
                     key=cb_key,
                 )
             st.divider()

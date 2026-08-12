@@ -29,6 +29,73 @@ def listing_to_property(listing_id: str, config: Dict) -> Tuple[str, str]:
     return "zz_Other", "Other"
 
 
+def get_listing_entry(listing_id: str, config: Dict) -> Tuple[Optional[Dict], Optional[Dict]]:
+    """Return (listing entry, property data) for a configured listing id."""
+    lid = str(listing_id)
+    for prop_data in config.values():
+        if not isinstance(prop_data, dict):
+            continue
+        for entry in prop_data.get("listings", []):
+            if str(entry.get("id")) == lid:
+                return entry, prop_data
+    return None, None
+
+
+def mirror_rates_from_listing_id(listing_id: str, config: Dict) -> Optional[str]:
+    entry, _ = get_listing_entry(listing_id, config)
+    if not entry:
+        return None
+    source_id = entry.get("mirror_rates_from")
+    return str(source_id) if source_id else None
+
+
+def is_mirror_listing(listing_id: str, config: Dict) -> bool:
+    return mirror_rates_from_listing_id(listing_id, config) is not None
+
+
+def mirror_targets_for_source(source_listing_id: str, config: Dict) -> List[Dict]:
+    """Configured mirror targets that copy rates from source_listing_id."""
+    source_id = str(source_listing_id)
+    targets: List[Dict] = []
+    for prop_key, prop_data in config.items():
+        if not isinstance(prop_data, dict):
+            continue
+        for entry in prop_data.get("listings", []):
+            if str(entry.get("mirror_rates_from")) != source_id:
+                continue
+            targets.append({
+                "id": str(entry.get("id")),
+                "name": entry.get("name", entry.get("id")),
+                "pms": prop_data.get("pms"),
+                "prop_key": prop_key,
+                "prop_name": prop_data.get("name", prop_key),
+            })
+    return targets
+
+
+def listing_pms(listing_id: str, config: Dict) -> Optional[str]:
+    _, prop_data = get_listing_entry(listing_id, config)
+    if not prop_data:
+        return None
+    pms = prop_data.get("pms")
+    return str(pms) if pms else None
+
+
+def partition_adjust_and_mirror_listings(
+    listings: List[Dict], prop_config: Dict
+) -> Tuple[List[Dict], List[Dict]]:
+    """Split selected listings into adjust vs mirror-only (mirror_rates_from)."""
+    adjust: List[Dict] = []
+    mirror_only: List[Dict] = []
+    for listing in listings:
+        lid = str(listing.get("id"))
+        if is_mirror_listing(lid, prop_config):
+            mirror_only.append(listing)
+        else:
+            adjust.append(listing)
+    return adjust, mirror_only
+
+
 def listing_units(listing_id: str, config: Dict) -> int:
     """Return configured unit count for a listing (defaults to 1)."""
     lid = str(listing_id)
