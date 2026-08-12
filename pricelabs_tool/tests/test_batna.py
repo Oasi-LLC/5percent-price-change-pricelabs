@@ -90,7 +90,7 @@ def test_is_weekend_day():
 
 def test_blueridge_weekday_weekend_batna():
     config = _load_prop_config()
-    listing_id = "3527b9f8-e4db-4220-8f47-f41ecda4d983"  # Little Luxe, weekday 200 weekend 300
+    listing_id = "6a74a4b9067fda0013c87525"  # Wellness Lodge, weekday 200 weekend 300
     assert batna_floor_for_date(listing_id, "2026-05-21", config) == 200.0  # Thu
     assert batna_floor_for_date(listing_id, "2026-05-22", config) == 300.0  # Fri
     assert batna_floor_for_date(listing_id, "2026-05-24", config) == 200.0  # Sun
@@ -99,7 +99,7 @@ def test_blueridge_weekday_weekend_batna():
 
 def test_blueridge_weekend_clamp_on_decrease():
     config = _load_prop_config()
-    listing_id = "0dfcb2d6-226c-4a4a-a6eb-378ef134cd94"  # A-Frame weekend 800
+    listing_id = "6a74a4c0067fda0013c8769e"  # Luxe A-Frame weekend 800
     floor = batna_floor_for_date(listing_id, "2026-05-23", config)  # Saturday
     final, clamped = apply_adjustment_with_batna(750, increase=False, batna_floor=floor)
     assert final == 800
