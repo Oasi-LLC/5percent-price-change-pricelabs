@@ -94,10 +94,12 @@ properties:
       - {name: "Little Luxe Lodge - Wellness Experience -- Wellness Lodge - Sauna, cold plunge, jacuzzi", id: "6a74a4b9067fda0013c87525", units: 1, batna: 200.00, batna_weekday: 200.00, batna_weekend: 300.00}
       - {name: "Luxe Lodge A-Frame -- Luxe A-Frame | Golf · Hot Tub · National Forest", id: "6a74a4c0067fda0013c8769e", units: 1, batna: 550.00, batna_weekday: 550.00, batna_weekend: 800.00}
 
-  blueridge_orbirental:
-    name: "Blue Ridge (Orbirental)"
-    pms: orbirental
-    total_units: 2
-    listings:
-      - {name: "Little Luxe Lodge - Wellness Experience", id: "3527b9f8-e4db-4220-8f47-f41ecda4d983", units: 1, mirror_rates_from: "6a74a4b9067fda0013c87525"}
-      - {name: "Luxe Lodge A-Frame", id: "0dfcb2d6-226c-4a4a-a6eb-378ef134cd94", units: 1, mirror_rates_from: "6a74a4c0067fda0013c8769e"}
+  # Blue Ridge Orbirental (legacy) kept in PriceLabs but excluded from this tool.
+  # Previously mirrored rates from Guesty; re-enable if Orbirental sync is needed again.
+  # blueridge_orbirental:
+  #   name: "Blue Ridge (Orbirental)"
+  #   pms: orbirental
+  #   total_units: 2
+  #   listings:
+  #     - {name: "Little Luxe Lodge - Wellness Experience", id: "3527b9f8-e4db-4220-8f47-f41ecda4d983", units: 1, mirror_rates_from: "6a74a4b9067fda0013c87525"}
+  #     - {name: "Luxe Lodge A-Frame", id: "0dfcb2d6-226c-4a4a-a6eb-378ef134cd94", units: 1, mirror_rates_from: "6a74a4c0067fda0013c8769e"}
