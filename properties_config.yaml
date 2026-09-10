@@ -80,9 +80,9 @@ properties:
       - {name: "FLOHOM 12", id: "422608", units: 1, batna: 250.00}
       - {name: "FLOHOM 13", id: "485833", units: 1, batna: 315.00}
       - {name: "FLOHOM 14", id: "407612", units: 1, batna: 150.00}
-      - {name: "FLOHOM 15", id: "467334", units: 1, batna: 275.00}
+      - {name: "FLOHOM 15", id: "467334", units: 1, batna: 225.00}
       - {name: "FLOHOM 16", id: "510832", units: 1, batna: 300.00}
-      - {name: "Flohom 17", id: "514132", units: 1, batna: 300.00}
+      - {name: "Flohom 17", id: "514132", units: 1, batna: 250.00}
 
   # Lafave Zion kept in PriceLabs but excluded from this tool (not adjusted).
 
