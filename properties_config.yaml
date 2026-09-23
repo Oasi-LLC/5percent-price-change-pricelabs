@@ -66,23 +66,24 @@ properties:
     pms: hostaway
     update_children: true   # Hostaway/FLOHOM: push to child listings so changes appear in PriceLabs
     listings:
-      - {name: "FLOHOM 1", id: "146908", units: 1, batna: 275.00}
-      - {name: "FLOHOM 2", id: "146944", units: 1, batna: 225.00}
-      - {name: "FLOHOM 3", id: "146946", units: 1, batna: 125.00}
-      - {name: "FLOHOM 4", id: "260001", units: 1, batna: 275.00}
-      - {name: "FLOHOM 5", id: "278502", units: 1, batna: 200.00}
-      - {name: "FLOHOM 6", id: "345316", units: 1, batna: 300.00}
-      - {name: "FLOHOM 7", id: "366176", units: 1, batna: 250.00}
-      - {name: "FLOHOM 8", id: "376368", units: 1, batna: 175.00}
-      - {name: "FLOHOM 9", id: "383097", units: 1, batna: 200.00}
-      - {name: "FLOHOM 10", id: "404358", units: 1, batna: 250.00}
-      - {name: "FLOHOM 11", id: "427313", units: 1, batna: 125.00}
-      - {name: "FLOHOM 12", id: "422608", units: 1, batna: 250.00}
-      - {name: "FLOHOM 13", id: "485833", units: 1, batna: 315.00}
-      - {name: "FLOHOM 14", id: "407612", units: 1, batna: 150.00}
-      - {name: "FLOHOM 15", id: "467334", units: 1, batna: 225.00}
-      - {name: "FLOHOM 16", id: "510832", units: 1, batna: 300.00}
-      - {name: "Flohom 17", id: "514132", units: 1, batna: 250.00}
+      # Dec 2026 Mon-Wed (weekdays 0,1,2): BATNA $25 below default
+      - {name: "FLOHOM 1", id: "146908", units: 1, batna: 275.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 250.00}]}
+      - {name: "FLOHOM 2", id: "146944", units: 1, batna: 225.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 200.00}]}
+      - {name: "FLOHOM 3", id: "146946", units: 1, batna: 125.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 100.00}]}
+      - {name: "FLOHOM 4", id: "260001", units: 1, batna: 275.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 250.00}]}
+      - {name: "FLOHOM 5", id: "278502", units: 1, batna: 200.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 175.00}]}
+      - {name: "FLOHOM 6", id: "345316", units: 1, batna: 300.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 275.00}]}
+      - {name: "FLOHOM 7", id: "366176", units: 1, batna: 250.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 225.00}]}
+      - {name: "FLOHOM 8", id: "376368", units: 1, batna: 175.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 150.00}]}
+      - {name: "FLOHOM 9", id: "383097", units: 1, batna: 200.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 175.00}]}
+      - {name: "FLOHOM 10", id: "404358", units: 1, batna: 250.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 225.00}]}
+      - {name: "FLOHOM 11", id: "427313", units: 1, batna: 125.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 100.00}]}
+      - {name: "FLOHOM 12", id: "422608", units: 1, batna: 250.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 225.00}]}
+      - {name: "FLOHOM 13", id: "485833", units: 1, batna: 315.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 290.00}]}
+      - {name: "FLOHOM 14", id: "407612", units: 1, batna: 150.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 125.00}]}
+      - {name: "FLOHOM 15", id: "467334", units: 1, batna: 225.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 200.00}]}
+      - {name: "FLOHOM 16", id: "510832", units: 1, batna: 300.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 275.00}]}
+      - {name: "Flohom 17", id: "514132", units: 1, batna: 250.00, batna_range_overrides: [{start: "2026-12-01", end: "2026-12-31", weekdays: [0, 1, 2], batna: 225.00}]}
 
   # Lafave Zion kept in PriceLabs but excluded from this tool (not adjusted).
 

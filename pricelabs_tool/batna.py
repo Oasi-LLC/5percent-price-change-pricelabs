@@ -43,11 +43,45 @@ def is_date_in_batna_exempt_ranges(date_str: str, exempt_ranges: List[Dict]) -> 
     return False
 
 
+def batna_from_range_overrides(date_str: str, range_overrides: List[Dict]) -> Optional[float]:
+    """
+    Return override BATNA if date matches an inclusive {start, end} range.
+    Optional weekdays: Mon=0 .. Sun=6 (omit = all days in range).
+    First matching range wins.
+    """
+    d = _parse_date(date_str)
+    if d is None:
+        return None
+    for item in range_overrides:
+        start = _parse_date(str(item.get("start", "")))
+        end = _parse_date(str(item.get("end", "")))
+        if start is None or end is None or not (start <= d <= end):
+            continue
+        weekdays = item.get("weekdays")
+        if weekdays is not None:
+            try:
+                allowed = {int(w) for w in weekdays}
+            except (TypeError, ValueError):
+                continue
+            if d.weekday() not in allowed:
+                continue
+        if item.get("batna") is None:
+            continue
+        return float(item["batna"])
+    return None
+
+
 def batna_floor_from_entry_for_date(entry: Dict, date_str: str, prop_data: Optional[Dict]) -> Optional[float]:
     """Resolve BATNA floor from a listing config entry and override date."""
     exempt_ranges = entry.get("batna_exempt_ranges")
     if exempt_ranges and is_date_in_batna_exempt_ranges(date_str, exempt_ranges):
         return None
+
+    range_overrides = entry.get("batna_range_overrides")
+    if range_overrides:
+        ranged = batna_from_range_overrides(date_str, range_overrides)
+        if ranged is not None:
+            return ranged
 
     weekday_batna = entry.get("batna_weekday")
     weekend_batna = entry.get("batna_weekend")
@@ -71,6 +105,7 @@ def batna_floor_for_date(
     """
     Resolve BATNA floor for one override date.
     batna_exempt_ranges: no floor for those dates (5% only).
+    batna_range_overrides: date-range (+ optional weekdays) floor override.
     batna_weekday/batna_weekend: Sun-Thu / Fri-Sat (Blue Ridge).
     Others: flat batna.
     """
