@@ -89,8 +89,8 @@ def check_unit_tests() -> CheckResult:
         sys.executable,
         "-c",
         (
-            "from pricelabs_tool.tests import test_batna, test_run_guard\n"
-            "for mod in (test_batna, test_run_guard):\n"
+            "from pricelabs_tool.tests import test_batna, test_run_guard, test_reference_price\n"
+            "for mod in (test_batna, test_run_guard, test_reference_price):\n"
             "    for name in sorted(dir(mod)):\n"
             "        if name.startswith('test_'):\n"
             "            getattr(mod, name)()\n"

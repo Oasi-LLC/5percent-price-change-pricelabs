@@ -107,14 +107,14 @@ def test_blueridge_weekend_clamp_on_decrease():
 
 
 def test_flohom_dec_2026_mon_wed_batna_minus_25():
-    """Dec 2026 Mon-Wed use BATNA $25 below default; other Dec days keep flat BATNA."""
+    """Dec 2026 Mon-Wed use range override BATNA; other Dec days keep flat BATNA."""
     config = _load_prop_config()
-    flohom1 = "146908"  # default 275 -> Dec Mon-Wed 250
+    flohom1 = "146908"  # default 300; Dec Mon-Wed override 250
     assert batna_floor_for_date(flohom1, "2026-12-07", config) == 250.0  # Mon
     assert batna_floor_for_date(flohom1, "2026-12-01", config) == 250.0  # Tue
     assert batna_floor_for_date(flohom1, "2026-12-02", config) == 250.0  # Wed
-    assert batna_floor_for_date(flohom1, "2026-12-03", config) == 275.0  # Thu
-    assert batna_floor_for_date(flohom1, "2026-12-04", config) == 275.0  # Fri
-    assert batna_floor_for_date(flohom1, "2026-11-30", config) == 275.0  # before range
+    assert batna_floor_for_date(flohom1, "2026-12-03", config) == 300.0  # Thu
+    assert batna_floor_for_date(flohom1, "2026-12-04", config) == 300.0  # Fri
+    assert batna_floor_for_date(flohom1, "2026-11-30", config) == 300.0  # before range
     assert batna_floor_for_date("485833", "2026-12-14", config) == 290.0  # FLOHOM 13 Mon
     assert batna_floor_for_date("485833", "2026-12-17", config) == 315.0  # FLOHOM 13 Thu

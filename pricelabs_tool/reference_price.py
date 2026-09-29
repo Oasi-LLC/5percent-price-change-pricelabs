@@ -13,6 +13,15 @@ def price_matches(actual: int, expected: int, tolerance: int = DEFAULT_TOLERANCE
     return abs(actual - expected) <= tolerance
 
 
+def clamp_price_to_batna(
+    price: int, batna_floor: Optional[float]
+) -> Tuple[int, bool]:
+    """Raise price to BATNA floor when below it. Returns (price, was_clamped)."""
+    if batna_floor is not None and price < batna_floor:
+        return int(batna_floor), True
+    return int(price), False
+
+
 def tier_targets(
     reference: int,
     batna_floor: Optional[float],
@@ -68,6 +77,12 @@ def resolve_reference(
         return live, "neutral", True
 
     reference = int(stored_reference)
+    # Stale anchor below a raised BATNA floor: re-anchor so restore/toggle
+    # cannot push rates back under the floor (Malvern Loft 2026-09-29).
+    if batna_floor is not None and reference < batna_floor:
+        refreshed = max(live, int(batna_floor))
+        return refreshed, "neutral", True
+
     decreased, increased = tier_targets(reference, batna_floor, adjustment_percentage)
     state = infer_state(live, reference, decreased, increased, tolerance)
     if state == "manual":
@@ -92,7 +107,8 @@ def compute_target_price(
 
     if increase:
         if state == "decreased":
-            return reference, False, "restore_reference_after_decrease"
+            target, clamped = clamp_price_to_batna(reference, batna_floor)
+            return target, clamped, "restore_reference_after_decrease"
         if state == "increased":
             return increased, False, "apply_increase_from_reference"
         target, clamped = apply_adjustment_with_batna(
@@ -104,7 +120,8 @@ def compute_target_price(
         return target, clamped, "apply_increase_from_reference"
 
     if state == "increased":
-        return reference, False, "restore_reference_after_increase"
+        target, clamped = clamp_price_to_batna(reference, batna_floor)
+        return target, clamped, "restore_reference_after_increase"
     if state == "decreased":
         target, clamped = apply_adjustment_with_batna(
             float(reference),
